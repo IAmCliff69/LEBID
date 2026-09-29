@@ -1,0 +1,17 @@
+# Virtual environment
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment variables 
+.env
+
+# Python eggs
+*.egg-info/
+dist/
+build/
+
+# OS
+.DS_Store
+Thumbs.db
