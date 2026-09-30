@@ -1,9 +1,6 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
-<<<<<<< HEAD
 import { useLocation } from "react-router-dom";
-=======
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
 import { getMe, logout as logoutApi } from "@/api/auth";
 import type { User } from "@/api/auth";
 
@@ -18,24 +15,18 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-<<<<<<< HEAD
   const { pathname } = useLocation();
   const isPublicAuthRoute = pathname === "/login" || pathname === "/register";
-=======
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-<<<<<<< HEAD
     if (isPublicAuthRoute) {
       setIsLoading(false);
       return;
     }
 
     setIsLoading(true);
-=======
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
     const checkSession = async () => {
       try {
         const currentUser = await getMe();
@@ -48,11 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     checkSession();
-<<<<<<< HEAD
   }, [isPublicAuthRoute]);
-=======
-  }, []);
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
 
   const logout = async () => {
     await logoutApi();

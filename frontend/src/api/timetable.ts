@@ -55,11 +55,7 @@ export const updateTimetableEntry = async (
   id: number,
   data: Partial<CreateTimetableEntryData>
 ): Promise<TimetableEntry> => {
-<<<<<<< HEAD
   const response = await apiClient.patch(`/timetable/${id}`, data);
-=======
-  const response = await apiClient.put(`/timetable/${id}`, data);
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
   return response.data;
 };
 

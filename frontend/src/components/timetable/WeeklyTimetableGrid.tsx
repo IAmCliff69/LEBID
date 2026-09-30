@@ -3,20 +3,9 @@ import { useEffect, useMemo, useState } from "react";
 import type { TimetableEntry } from "@/api/timetable";
 import { getCourses } from "@/api/courses";
 import type { Course } from "@/api/courses";
-<<<<<<< HEAD
 import { updateTimetableEntry } from "@/api/timetable";
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
-=======
-
-const DAYS = [
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-];
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
 
 const TIME_SLOTS = [
   "07:00",
@@ -69,7 +58,6 @@ function hexToRgba(hex: string, alpha: number): string {
 
 interface Props {
   entries: TimetableEntry[];
-<<<<<<< HEAD
   onEntryClick: (entry: TimetableEntry) => void;
   selectedEntryId: number | null;
   onDeleteEntry: (entry: TimetableEntry) => void;
@@ -99,18 +87,6 @@ export default function WeeklyTimetableGrid({
   const [isSaving, setIsSaving] = useState(false);
   const ROW_HEIGHT = 72;
   const TIME_COLUMN_WIDTH = 58;
-=======
-}
-
-export default function WeeklyTimetableGrid({ entries }: Props) {
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [selectedEntry, setSelectedEntry] =
-    useState<TimetableEntry | null>(null);
-
-  const ROW_HEIGHT = 72;
-  const TIME_COLUMN_WIDTH = 58;
-
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
   const GRID_START = timeToMinutes("07:00");
 
   const DAY_INDEX: Record<string, number> = {
@@ -123,7 +99,6 @@ export default function WeeklyTimetableGrid({ entries }: Props) {
     Sunday: 6,
   };
 
-<<<<<<< HEAD
   const selectedEntry =
     entries.find((entry) => entry.id === selectedEntryId) ?? null;
 
@@ -146,8 +121,6 @@ export default function WeeklyTimetableGrid({ entries }: Props) {
     setSubmitError(null);
   }, [selectedEntry]);
 
-=======
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
   useEffect(() => {
     const loadCourses = async () => {
       try {
@@ -231,7 +204,6 @@ export default function WeeklyTimetableGrid({ entries }: Props) {
     const end = timeToMinutes(entry.end_time);
 
     const top = ((start - GRID_START) / 60) * ROW_HEIGHT;
-<<<<<<< HEAD
     const height = ((end - start) / 60) * ROW_HEIGHT;
 
     return { top, height };
@@ -274,36 +246,11 @@ export default function WeeklyTimetableGrid({ entries }: Props) {
     } finally {
       setIsSaving(false);
     }
-=======
-
-    const height = ((end - start) / 60) * ROW_HEIGHT;
-
-    return {
-      top,
-      height,
-    };
-  }
-
-  function getEntriesForDay(day: string): TimetableEntry[] {
-    return entries.filter(
-      (entry) => entry.day_of_week === DAY_INDEX[day]
-    );
-  }
-
-  function closeDetails() {
-    setSelectedEntry(null);
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
   }
 
   return (
     <>
-<<<<<<< HEAD
       <div className="w-full overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-=======
-      {/* TIMETABLE */}
-      <div className="w-full overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-        {/* DAY HEADER */}
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
         <div
           className="grid border-b border-border bg-muted/30"
           style={{
@@ -328,20 +275,12 @@ export default function WeeklyTimetableGrid({ entries }: Props) {
           ))}
         </div>
 
-<<<<<<< HEAD
-=======
-        {/* TIMETABLE BODY */}
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
         <div
           className="grid"
           style={{
             gridTemplateColumns: `${TIME_COLUMN_WIDTH}px repeat(5, minmax(0, 1fr))`,
           }}
         >
-<<<<<<< HEAD
-=======
-          {/* TIME COLUMN */}
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
           <div className="bg-muted/10">
             {TIME_SLOTS.map((time) => (
               <div
@@ -358,10 +297,6 @@ export default function WeeklyTimetableGrid({ entries }: Props) {
             ))}
           </div>
 
-<<<<<<< HEAD
-=======
-          {/* DAYS */}
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
           {DAYS.map((day) => (
             <div
               key={day}
@@ -371,105 +306,44 @@ export default function WeeklyTimetableGrid({ entries }: Props) {
               }}
             >
               {getEntriesForDay(day).map((entry) => {
-<<<<<<< HEAD
                 const { top, height } = getEntryStyle(entry);
                 const color = getCourseColor(entry);
                 const courseName = getCourseName(entry);
                 const courseCode = getCourseCode(entry);
                 const blockHeight = Math.max(height - 10, 62);
                 const nameLength = courseName.length;
-=======
-                const { top, height } =
-                  getEntryStyle(entry);
-
-                const color =
-                  getCourseColor(entry);
-
-                const courseName =
-                  getCourseName(entry);
-
-                const courseCode =
-                  getCourseCode(entry);
-
-                const blockHeight = Math.max(
-                  height - 10,
-                  62
-                );
-
-                const nameLength =
-                  courseName.length;
-
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
                 const courseNameSize =
                   nameLength > 45
                     ? "text-[8px]"
                     : nameLength > 32
-<<<<<<< HEAD
                       ? "text-[9px]"
                       : "text-[10px]";
                 const isSelected = selectedEntryId === entry.id;
-=======
-                    ? "text-[9px]"
-                    : "text-[10px]";
-
-                const isSelected =
-                  selectedEntry?.id === entry.id;
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
 
                 return (
                   <button
                     key={entry.id}
                     type="button"
-<<<<<<< HEAD
                     onClick={() => onEntryClick(entry)}
-=======
-                    onClick={() =>
-                      setSelectedEntry(entry)
-                    }
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
                     className="group absolute left-1 right-1 z-10 min-w-0 overflow-hidden rounded-xl border text-left transition-all duration-200 hover:z-30 hover:-translate-y-0.5 hover:shadow-lg focus:outline-none"
                     style={{
                       top: top + 5,
                       height: blockHeight,
 
-<<<<<<< HEAD
                       backgroundColor: hexToRgba(color, 0.16),
 
                       borderColor: isSelected ? color : hexToRgba(color, 0.38),
-=======
-                      backgroundColor:
-                        hexToRgba(color, 0.16),
-
-                      borderColor:
-                        isSelected
-                          ? color
-                          : hexToRgba(color, 0.38),
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
 
                       borderLeftWidth: "4px",
 
                       borderLeftColor: color,
 
                       boxShadow: isSelected
-<<<<<<< HEAD
                         ? `0 0 0 2px ${hexToRgba(color, 0.2)}, 0 8px 24px ${hexToRgba(color, 0.2)}`
-=======
-                        ? `0 0 0 2px ${hexToRgba(
-                            color,
-                            0.2
-                          )}, 0 8px 24px ${hexToRgba(
-                            color,
-                            0.2
-                          )}`
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
                         : undefined,
                     }}
                   >
                     <div className="flex h-full min-h-0 flex-col px-1.5 py-2 sm:px-2">
-<<<<<<< HEAD
-=======
-                      {/* COURSE NAME */}
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
                       <div className="min-w-0">
                         <p
                           className={`${courseNameSize} font-bold leading-tight`}
@@ -495,68 +369,34 @@ export default function WeeklyTimetableGrid({ entries }: Props) {
                         )}
                       </div>
 
-<<<<<<< HEAD
-=======
-                      {/* CLASS TYPE */}
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
                       <p className="mt-1 truncate text-[8px] font-semibold text-foreground sm:text-[9px]">
                         {entry.class_type || "Class"}
                       </p>
 
-<<<<<<< HEAD
-=======
-                      {/* VENUE */}
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
                       {entry.venue && (
                         <p className="mt-0.5 truncate text-[7px] text-foreground/60 sm:text-[8px]">
                           📍 {entry.venue}
                         </p>
                       )}
 
-<<<<<<< HEAD
-=======
-                      {/* LECTURER */}
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
                       {entry.lecturer && (
                         <p className="mt-0.5 truncate text-[7px] text-foreground/60 sm:text-[8px]">
                           👤 {entry.lecturer}
                         </p>
                       )}
 
-<<<<<<< HEAD
                       <div className="mt-auto min-w-0 pt-1">
                         <p className="truncate text-[7px] font-medium text-foreground/60 sm:text-[8px]">
                           {formatTime(entry.start_time)} – {formatTime(entry.end_time)}
-=======
-                      {/* TIME */}
-                      <div className="mt-auto min-w-0 pt-1">
-                        <p className="truncate text-[7px] font-medium text-foreground/60 sm:text-[8px]">
-                          {formatTime(
-                            entry.start_time
-                          )}{" "}
-                          –{" "}
-                          {formatTime(
-                            entry.end_time
-                          )}
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
                         </p>
                       </div>
                     </div>
 
-<<<<<<< HEAD
-=======
-                    {/* HOVER LABEL */}
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
                     <div
                       className="pointer-events-none absolute bottom-1 right-1 rounded px-1 py-0.5 text-[7px] font-semibold opacity-0 shadow-sm backdrop-blur-md transition-opacity group-hover:opacity-100"
                       style={{
                         color,
-<<<<<<< HEAD
                         backgroundColor: hexToRgba(color, 0.12),
-=======
-                        backgroundColor:
-                          hexToRgba(color, 0.12),
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
                       }}
                     >
                       Details
@@ -569,7 +409,6 @@ export default function WeeklyTimetableGrid({ entries }: Props) {
         </div>
       </div>
 
-<<<<<<< HEAD
       {selectedEntry && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center p-4"
@@ -858,165 +697,3 @@ export default function WeeklyTimetableGrid({ entries }: Props) {
     </>
   );
 }
-=======
-      {/* COURSE DETAILS POPUP */}
-{selectedEntry && (
-  <div
-    className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-    onMouseDown={closeDetails}
-  >
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="course-details-title"
-      className="w-full max-w-sm overflow-hidden rounded-2xl border bg-card shadow-2xl"
-      style={{
-        borderColor: hexToRgba(
-          getCourseColor(selectedEntry),
-          0.3
-        ),
-      }}
-      onMouseDown={(event) =>
-        event.stopPropagation()
-      }
-    >
-      {/* COURSE COLOR ACCENT */}
-      <div
-        className="h-1 w-full"
-        style={{
-          backgroundColor:
-            getCourseColor(selectedEntry),
-        }}
-      />
-
-      <div className="p-5">
-        {/* HEADER */}
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span
-                className="size-2.5 shrink-0 rounded-full"
-                style={{
-                  backgroundColor:
-                    getCourseColor(selectedEntry),
-                }}
-              />
-
-              <span
-                className="text-[10px] font-bold uppercase tracking-wider"
-                style={{
-                  color:
-                    getCourseColor(selectedEntry),
-                }}
-              >
-                {getCourseCode(selectedEntry)}
-              </span>
-            </div>
-
-            <h3
-              id="course-details-title"
-              className="mt-2 text-lg font-bold leading-tight"
-            >
-              {getCourseName(selectedEntry)}
-            </h3>
-
-            <p className="mt-1 text-xs text-muted-foreground">
-              {selectedEntry.class_type || "Class"}
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={closeDetails}
-            aria-label="Close"
-            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-lg text-muted-foreground transition hover:bg-muted hover:text-foreground"
-          >
-            ×
-          </button>
-        </div>
-
-        {/* DETAILS */}
-        <div className="mt-5 space-y-2.5">
-          <div className="flex items-center justify-between rounded-xl bg-muted/40 px-3 py-2.5">
-            <span className="text-xs text-muted-foreground">
-              Day
-            </span>
-
-            <span className="text-xs font-semibold">
-              {DAYS[selectedEntry.day_of_week] ??
-                "Unknown"}
-            </span>
-          </div>
-
-          <div className="flex items-center justify-between rounded-xl bg-muted/40 px-3 py-2.5">
-            <span className="text-xs text-muted-foreground">
-              Time
-            </span>
-
-            <span className="text-xs font-semibold">
-              {formatTime(
-                selectedEntry.start_time
-              )}{" "}
-              –{" "}
-              {formatTime(
-                selectedEntry.end_time
-              )}
-            </span>
-          </div>
-
-          <div className="flex items-center justify-between gap-4 rounded-xl bg-muted/40 px-3 py-2.5">
-            <span className="text-xs text-muted-foreground">
-              Venue
-            </span>
-
-            <span className="truncate text-right text-xs font-semibold">
-              {selectedEntry.venue ||
-                "Not specified"}
-            </span>
-          </div>
-
-          <div className="flex items-center justify-between gap-4 rounded-xl bg-muted/40 px-3 py-2.5">
-            <span className="text-xs text-muted-foreground">
-              Lecturer
-            </span>
-
-            <span className="truncate text-right text-xs font-semibold">
-              {selectedEntry.lecturer ||
-                "Not specified"}
-            </span>
-          </div>
-        </div>
-
-        {/* COURSE COLOR FOOTER */}
-        <div className="mt-4 flex items-center justify-between">
-          <span
-            className="rounded-lg px-2.5 py-1.5 text-[10px] font-semibold"
-            style={{
-              color:
-                getCourseColor(selectedEntry),
-              backgroundColor:
-                hexToRgba(
-                  getCourseColor(selectedEntry),
-                  0.1
-                ),
-            }}
-          >
-            {getCourseCode(selectedEntry)}
-          </span>
-
-          <button
-            type="button"
-            onClick={closeDetails}
-            className="rounded-lg px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-)}
-    </>
-  );
-}
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e

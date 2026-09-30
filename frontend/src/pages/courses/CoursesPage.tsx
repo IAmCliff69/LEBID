@@ -1,35 +1,16 @@
 import { useEffect, useState } from "react";
-<<<<<<< HEAD
 import { BookOpen, GraduationCap, Plus, Trash2 } from "lucide-react";
 import AddCourseDialog from "@/components/courses/AddCourseDialog";
 import EditCourseDialog from "@/components/courses/EditCourseDialog";
 import { getCourses, deleteCourse } from "@/api/courses";
 import type { Course } from "@/api/courses";
 import { Button } from "@/components/ui/button";
-=======
-
-import {
-  BookOpen,
-  GraduationCap,
-  Plus,
-} from "lucide-react";
-
-import AddCourseDialog from "@/components/courses/AddCourseDialog";
-import EditCourseDialog from "@/components/courses/EditCourseDialog";
-
-import { getCourses } from "@/api/courses";
-import type { Course } from "@/api/courses";
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
 
 export default function CoursesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-<<<<<<< HEAD
 const [error, setError] = useState<string | null>(null);
 const [deletingId, setDeletingId] = useState<string | null>(null);
-=======
-  const [error, setError] = useState<string | null>(null);
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
 
   useEffect(() => {
     const fetchCourses = async () => {
@@ -62,7 +43,6 @@ const [deletingId, setDeletingId] = useState<string | null>(null);
     );
   };
 
-<<<<<<< HEAD
   const handleDelete = async (course: Course) => {
     if (!confirm(`Delete "${course.name}"? This will also remove all timetable entries, tasks, and assignments linked to this course.`)) return;
     setDeletingId(String(course.id));
@@ -76,8 +56,6 @@ const [deletingId, setDeletingId] = useState<string | null>(null);
     }
   };
 
-=======
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
   return (
     <div className="mx-auto max-w-7xl space-y-8">
       {/* =====================================================
@@ -238,10 +216,6 @@ const [deletingId, setDeletingId] = useState<string | null>(null);
                           <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
                             Credits
                           </p>
-<<<<<<< HEAD
-=======
-
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
                           <p className="mt-0.5 text-sm font-semibold">
                             {course.credit_hours}
                           </p>
@@ -251,17 +225,12 @@ const [deletingId, setDeletingId] = useState<string | null>(null);
                           <p className="text-xs text-muted-foreground">
                             Course
                           </p>
-<<<<<<< HEAD
-=======
-
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
                           <p className="text-sm font-medium">
                             Active
                           </p>
                         </div>
                       )}
 
-<<<<<<< HEAD
                       <div className="flex items-center gap-2">
                         <EditCourseDialog
                           course={course}
@@ -278,12 +247,6 @@ const [deletingId, setDeletingId] = useState<string | null>(null);
                           {deletingId === String(course.id) ? "Deleting..." : "Delete"}
                         </Button>
                       </div>
-=======
-                      <EditCourseDialog
-                        course={course}
-                        onCourseUpdated={handleCourseUpdated}
-                      />
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
                     </div>
                   </div>
                 );

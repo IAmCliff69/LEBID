@@ -4,10 +4,7 @@ import {
   useRef,
   useState,
   type MouseEvent as ReactMouseEvent,
-<<<<<<< HEAD
   
-=======
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
 } from "react";
 
 import {
@@ -20,18 +17,14 @@ import {
   BookOpen,
   GraduationCap,
   UserRound,
-<<<<<<< HEAD
   Pencil,
   Trash2,
   CalendarClock,
-=======
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
 } from "lucide-react";
 
 import { getCourses } from "@/api/courses";
 import type { Course } from "@/api/courses";
 
-<<<<<<< HEAD
 import {
   getStudySessions,
   getTodayStudySessions,
@@ -43,10 +36,6 @@ import type { StudySession } from "@/api/studySessions";
 import AddStudySessionDialog from "@/components/study-sessions/AddStudySessionDialog";
 import EditStudySessionDialog from "@/components/study-sessions/EditStudySessionDialog";
 import RescheduleStudySessionDialog from "@/components/study-sessions/RescheduleStudySessionDialog";
-=======
-import { getStudySessions } from "@/api/studySessions";
-import type { StudySession } from "@/api/studySessions";
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
 
 import { getEvents } from "@/api/events";
 import type { PlannerEvent } from "@/api/events";
@@ -219,12 +208,9 @@ export default function StudyPlannerPage() {
   const [weeklySummarySessions, setWeeklySummarySessions] = useState<
     StudySession[]
   >([]);
-<<<<<<< HEAD
   const [todaySessions, setTodaySessions] = useState<StudySession[]>([]);
   const [weekSessions, setWeekSessions] = useState<StudySession[]>([]);
   const [missedSessions, setMissedSessions] = useState<StudySession[]>([]);
-=======
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
   const [events, setEvents] = useState<PlannerEvent[]>([]);
   const [timetableEntries, setTimetableEntries] =
     useState<TimetableEntry[]>([]);
@@ -252,7 +238,6 @@ export default function StudyPlannerPage() {
   const [showPersonalEvents, setShowPersonalEvents] =
     useState(true);
 
-<<<<<<< HEAD
   // The study session currently open in the Edit dialog (null = closed)
   const [editingSession, setEditingSession] =
     useState<StudySession | null>(null);
@@ -268,8 +253,6 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
   // Bumped after a session is created so the planner reloads its data
   const [refreshKey, setRefreshKey] = useState(0);
 
-=======
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -299,7 +282,6 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
   useEffect(() => {
     const loadPlannerData = async () => {
       try {
-<<<<<<< HEAD
         // Only the first load shows the full-page spinner, so the
         // planner (and open dialogs) do not flash away on refresh.
         setError("");
@@ -338,42 +320,6 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
       setTodaySessions(todayData);
       setWeekSessions(weekData);
       setMissedSessions(missedData);
-=======
-        setLoading(true);
-        setError("");
-
-        const [
-          courseData,
-          sessionData,
-          weeklySessionData,
-          eventData,
-          timetableData,
-        ] = await Promise.all([
-          getCourses(),
-
-          getStudySessions({
-            date_from: dateToKey(calendarRange.start),
-            date_to: dateToKey(calendarRange.end),
-          }),
-
-          getStudySessions({
-            date_from: dateToKey(currentWeek),
-            date_to: dateToKey(addDays(currentWeek, 6)),
-          }),
-
-          getEvents({
-            upcoming_only: false,
-          }),
-
-          getTimetable(),
-        ]);
-
-        setCourses(courseData);
-        setStudySessions(sessionData);
-        setWeeklySummarySessions(weeklySessionData);
-        setEvents(eventData);
-        setTimetableEntries(timetableData);
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
       } catch (err) {
         console.error("Failed to load planner:", err);
 
@@ -386,11 +332,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
     };
 
     loadPlannerData();
-<<<<<<< HEAD
   }, [calendarRange, currentWeek, refreshKey]);
-=======
-  }, [calendarRange, currentWeek]);
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
 
   const weekDays = useMemo(() => {
     return DAYS.map((dayName, index) => {
@@ -470,19 +412,12 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
    */
 
   const closePopup = () => {
-<<<<<<< HEAD
   setSelectedLecture(null);
   setSelectedStudySession(null);
   setSelectedEvent(null);
   setConfirmingDelete(false);   // ← add
   setDeleteError(null);          // ← add
 };
-=======
-    setSelectedLecture(null);
-    setSelectedStudySession(null);
-    setSelectedEvent(null);
-  };
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
 
   const openPopup = (
     event: ReactMouseEvent<HTMLElement>,
@@ -598,7 +533,6 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
     selectedEvent,
   ]);
 
-<<<<<<< HEAD
   const handleDeleteSession = async () => {
   if (!selectedStudySession) return;
   setIsDeleting(true);
@@ -614,8 +548,6 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
   }
 };
 
-=======
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
   const navigateCalendar = (direction: -1 | 1) => {
     closePopup();
 
@@ -760,14 +692,11 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
           </div>
         </div>
 
-<<<<<<< HEAD
         <AddStudySessionDialog
           courses={courses}
           defaultDate={dateToKey(selectedDate)}
           onSessionAdded={() => setRefreshKey((k) => k + 1)}
         />
-=======
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
       </div>
 
       {/* ERROR */}
@@ -888,7 +817,6 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
 
               <p className="mt-1 text-xs text-slate-500">
                 {formatShortDate(currentWeek)} –{" "}
-<<<<<<< HEAD
                 {formatShortDate(addDays(currentWeek, 6))}
               </p>
             </div>
@@ -952,95 +880,10 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                     )}
                   </div>
                 )}
-=======
-                {formatShortDate(
-                  addDays(currentWeek, 6)
-                )}
-              </p>
-            </div>
-
-            <div
-              className="rounded-lg p-3"
-              style={{
-                backgroundColor: "#CAF0F8",
-              }}
-            >
-              <p
-                className="text-2xl font-bold"
-                style={{
-                  color: PRIMARY_COLOR,
-                }}
-              >
-                {totalWeeklyItems}
-              </p>
-
-              <p className="mt-0.5 text-xs text-slate-500">
-                scheduled items
-              </p>
-            </div>
-          </section>
-
-          {/* REMINDERS */}
-
-          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-4 flex items-start justify-between">
-              <div>
-                <h2 className="text-sm font-semibold text-slate-900">
-                  Reminders
-                </h2>
-
-                <p className="mt-1 text-xs text-slate-500">
-                  Keep your academic week on track.
-                </p>
-              </div>
-
-              <Clock className="h-4 w-4 text-slate-400" />
-            </div>
-
-            <div className="space-y-2">
-              <div className="rounded-lg bg-[#023EBA] p-3">
-                <p className="text-xs font-medium text-white">
-                  Study sessions
-                </p>
-
-                <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
-                  You have{" "}
-                  <span
-                    className="font-semibold"
-                    style={{
-                      color: PRIMARY_COLOR,
-                    }}
-                  >
-                    {weeklySummarySessions.length}
-                  </span>{" "}
-                  planned study session
-                  {weeklySummarySessions.length === 1
-                    ? ""
-                    : "s"}{" "}
-                  this week.
-                </p>
-              </div>
-
-              <div className="rounded-lg bg-slate-50 p-3">
-                <p className="text-xs font-medium text-slate-800">
-                  Personal events
-                </p>
-
-                <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
-                  {weeklyEvents.length === 0
-                    ? "No personal events scheduled."
-                    : `${weeklyEvents.length} personal event${
-                        weeklyEvents.length === 1
-                          ? ""
-                          : "s"
-                      } scheduled.`}
-                </p>
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
               </div>
             </div>
           </section>
 
-<<<<<<< HEAD
           {/* TODAY'S STUDY SESSIONS */}
 
           <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -1187,8 +1030,6 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
             </section>
           )}
 
-=======
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
           {/* OTHER CALENDARS */}
 
           <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -1208,13 +1049,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
               <button
                 type="button"
                 onClick={() =>
-<<<<<<< HEAD
                   setShowPersonalEvents((previous) => !previous)
-=======
-                  setShowPersonalEvents(
-                    (previous) => !previous
-                  )
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
                 }
                 className="flex w-full items-center gap-3 rounded-lg px-1 py-1 text-left transition hover:bg-slate-50"
               >
@@ -1226,14 +1061,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                   }`}
                   style={
                     showPersonalEvents
-<<<<<<< HEAD
                       ? { backgroundColor: PRIMARY_COLOR }
-=======
-                      ? {
-                          backgroundColor:
-                            PRIMARY_COLOR,
-                        }
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
                       : undefined
                   }
                 >
@@ -1244,13 +1072,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
 
                 <span
                   className="h-2.5 w-2.5 rounded-full"
-<<<<<<< HEAD
                   style={{ backgroundColor: PRIMARY_COLOR }}
-=======
-                  style={{
-                    backgroundColor: PRIMARY_COLOR,
-                  }}
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
                 />
 
                 <span className="text-xs text-slate-700">
@@ -1263,36 +1085,17 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
               <button
                 type="button"
                 onClick={() =>
-<<<<<<< HEAD
                   setShowLectures((previous) => !previous)
-=======
-                  setShowLectures(
-                    (previous) => !previous
-                  )
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
                 }
                 className="flex w-full items-center gap-3 rounded-lg px-1 py-1 text-left transition hover:bg-slate-50"
               >
                 <span
-<<<<<<< HEAD
                   className={`flex h-4 w-4 items-center justify-center rounded border ${
                     showLectures ? "border-primary" : "border-slate-300"
                   }`}
                   style={
                     showLectures
                       ? { backgroundColor: PRIMARY_COLOR }
-=======
-                    className={`flex h-4 w-4 items-center justify-center rounded border ${
-                    showLectures
-                        ? "border-primary"
-                      : "border-slate-300"
-                  }`}
-                  style={
-                    showLectures
-                      ? {
-                          backgroundColor: PRIMARY_COLOR,
-                        }
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
                       : undefined
                   }
                 >
@@ -1303,13 +1106,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
 
                 <span className="h-2.5 w-2.5 rounded-full bg-primary" />
 
-<<<<<<< HEAD
                 <span className="text-xs text-slate-700">Lectures</span>
-=======
-                <span className="text-xs text-slate-700">
-                  Lectures
-                </span>
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
               </button>
 
               {/* STUDY SESSIONS */}
@@ -1317,13 +1114,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
               <button
                 type="button"
                 onClick={() =>
-<<<<<<< HEAD
                   setShowStudySessions((previous) => !previous)
-=======
-                  setShowStudySessions(
-                    (previous) => !previous
-                  )
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
                 }
                 className="flex w-full items-center gap-3 rounded-lg px-1 py-1 text-left transition hover:bg-slate-50"
               >
@@ -1335,13 +1126,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                   }`}
                   style={
                     showStudySessions
-<<<<<<< HEAD
                       ? { backgroundColor: "#00B4D8" }
-=======
-                      ? {
-                          backgroundColor: "#00B4D8",
-                        }
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
                       : undefined
                   }
                 >
@@ -2501,7 +2286,6 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                   </div>
                 )}
               </div>
-<<<<<<< HEAD
 
           {/* DELETE ERROR */}
 
@@ -2582,8 +2366,6 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
             </button>
           </div>
 
-=======
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
             </>
           )}
 
@@ -2743,7 +2525,6 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
 
         </div>
       )}
-<<<<<<< HEAD
 
       {/* EDIT STUDY SESSION DIALOG */}
 
@@ -2765,8 +2546,3 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
     </div>
   );
 }
-=======
-    </div>
-  );
-}
->>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
