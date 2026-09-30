@@ -2,7 +2,6 @@ import { UserRound } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { useAuth } from "@/context/AuthContext";
-import NotificationBell from "@/components/notifications/NotificationBell";  // ← add
 
 interface TopBarProps {
   title: string;
@@ -22,8 +21,6 @@ export default function TopBar({ title }: TopBarProps) {
 
       {/* User area */}
       <div className="flex items-center gap-3">
-        <NotificationBell />   {/* ← add */}
-
         <Link
           to="/profile"
           className="hidden items-center gap-3 rounded-xl border border-border bg-card px-3 py-1.5 transition-colors hover:border-primary/30 hover:bg-primary/5 sm:flex"

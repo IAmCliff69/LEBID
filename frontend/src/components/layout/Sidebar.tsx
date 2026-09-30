@@ -9,10 +9,6 @@ import {
   Library,
   BookOpen,
   LogOut,
-  Calendar,
-  Sparkles,
-  Bell,
-  CircleAlert,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -55,32 +51,11 @@ const navItems = [
     icon: GraduationCap,
   },
   {
-    label: "Events",
-    to: "/events",
-    icon: Calendar,
-  },
-  {
-    label: "AI Assistant",
-    to: "/ai",
-    icon: Sparkles,
-  },
-  {
-    label: "Notifications",
-    to: "/notifications",
-    icon: Bell,
-  },
-  {
     label: "Analytics",
     to: "/analytics",
     icon: BarChart2,
   },
-  {    
-  label: "Conflict Checker",
-  to: "/conflicts",
-    icon: CircleAlert,
-  },
 ];
-
 
 export default function Sidebar() {
   const { logout } = useAuth();
