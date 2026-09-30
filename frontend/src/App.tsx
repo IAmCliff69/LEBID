@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { AuthProvider } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/common/ProtectedRoute";
 import AppLayout from "@/components/layout/AppLayout";
+import NotificationsPage from "@/pages/notifications/NotificationsPage";  // ← add
 
 import AuthPage from "@/pages/auth/AuthPage";
 import DashboardPage from "@/pages/dashboard/DashboardPage";
@@ -13,9 +14,12 @@ import StudyPlannerPage from "@/pages/planner/StudyPlannerPage";
 import TasksPage from "@/pages/tasks/TasksPage";
 import AssignmentsPage from "@/pages/assignments/AssignmentsPage";
 import ExamsPage from "@/pages/exams/ExamsPage";
+import EventsPage from "@/pages/events/EventsPage";
 import AnalyticsPage from "@/pages/analytics/AnalyticsPage";
 import CoursesPage from "@/pages/courses/CoursesPage";
 import ProfilePage from "@/pages/profile/ProfilePage";
+import AiAssistantPage from "@/pages/ai/AiAssistantPage";
+import ConflictCheckerPage from "@/pages/conflicts/ConflictCheckerPage";  // ← add
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -107,6 +111,33 @@ export default function App() {
             }
           />
 
+                    <Route
+            path="/conflicts"
+            element={
+              <ProtectedLayout title="Conflict Checker">
+                <ConflictCheckerPage />
+              </ProtectedLayout>
+            }
+          />
+
+          <Route
+            path="/ai"
+            element={
+              <ProtectedLayout title="AI Assistant">
+                <AiAssistantPage />
+              </ProtectedLayout>
+            }
+          />
+
+          <Route
+            path="/notifications"
+            element={
+              <ProtectedLayout title="Notifications" showTopBar>
+                <NotificationsPage />
+              </ProtectedLayout>
+            }
+          />
+
           <Route
             path="/tasks"
             element={
@@ -130,6 +161,15 @@ export default function App() {
             element={
               <ProtectedLayout title="Exams">
                 <ExamsPage />
+              </ProtectedLayout>
+            }
+          />
+
+          <Route
+            path="/events"
+            element={
+              <ProtectedLayout title="Events">
+                <EventsPage />
               </ProtectedLayout>
             }
           />

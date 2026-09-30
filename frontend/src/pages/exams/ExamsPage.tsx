@@ -259,7 +259,7 @@ function ExamCard({
     >
       <div className="flex items-start gap-4">
         {/* Date block */}
-        <div className="shrink-0 text-center min-w-[48px]">
+        <div className="shrink-0 text-center min-w-12">
           <p className="text-xs text-muted-foreground font-medium uppercase">
             {new Date(exam.exam_date + "T00:00:00").toLocaleDateString(
               "en-GB",

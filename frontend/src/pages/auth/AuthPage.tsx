@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -65,8 +65,15 @@ export default function AuthPage({ initialMode }: { initialMode: "login" | "regi
   const navigate = useNavigate();
   const location = useLocation();
   const { setUser } = useAuth();
-  const [isSignUp, setIsSignUp] = useState(initialMode === "register");
-  const [serverError, setServerError] = useState<string | null>(null);
+  const isSignUp =
+    location.pathname === "/register" ||
+    (location.pathname !== "/login" && initialMode === "register");
+  const [serverError, setServerError] = useState<{
+    pathname: string;
+    message: string;
+  } | null>(null);
+  const visibleServerError =
+    serverError?.pathname === location.pathname ? serverError.message : null;
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -75,14 +82,7 @@ export default function AuthPage({ initialMode }: { initialMode: "login" | "regi
     resolver: zodResolver(registerSchema),
   });
 
-  useEffect(() => {
-    const nextMode = location.pathname === "/register";
-    setIsSignUp(nextMode);
-    setServerError(null);
-  }, [location.pathname]);
-
   const switchMode = (nextMode: boolean) => {
-    setIsSignUp(nextMode);
     setServerError(null);
     navigate(nextMode ? "/register" : "/login");
   };
@@ -94,7 +94,10 @@ export default function AuthPage({ initialMode }: { initialMode: "login" | "regi
       setUser(user);
       navigate("/dashboard");
     } catch (error: unknown) {
-      setServerError(getErrorMessage(error, "Invalid email or password."));
+      setServerError({
+        pathname: location.pathname,
+        message: getErrorMessage(error, "Invalid email or password."),
+      });
     }
   };
 
@@ -110,9 +113,10 @@ export default function AuthPage({ initialMode }: { initialMode: "login" | "regi
       setUser(user);
       navigate("/dashboard");
     } catch (error: unknown) {
-      setServerError(
-        getErrorMessage(error, "Registration failed. Please try again."),
-      );
+      setServerError({
+        pathname: location.pathname,
+        message: getErrorMessage(error, "Registration failed. Please try again."),
+      });
     }
   };
 
@@ -123,9 +127,9 @@ export default function AuthPage({ initialMode }: { initialMode: "login" | "regi
   const authPanelStyle = {
     backgroundImage: "url('/background.png')",
   };
-  const serverErrorBlock = serverError && (
+  const serverErrorBlock = visibleServerError && (
     <p role="alert" className="mt-2 w-full rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-left text-xs text-red-700">
-      {serverError}
+      {visibleServerError}
     </p>
   );
 
@@ -137,11 +141,11 @@ export default function AuthPage({ initialMode }: { initialMode: "login" | "regi
           "linear-gradient(rgba(3, 4, 94, 0.36), rgba(3, 4, 94, 0.36)), url('/graduation-background.jpg')",
       }}
     >
-      <section className="relative min-h-[540px] w-full max-w-[940px] overflow-hidden rounded-2xl border border-[#d1e8f0] bg-[#03045e] shadow-[0_24px_70px_rgba(3,4,94,0.28)] sm:min-h-[560px]">
+      <section className="relative min-h-135 w-full max-w- overflow-hidden rounded-2xl border border-[#d1e8f0] bg-[#03045e] shadow-[0_24px_70px_rgba(3,4,94,0.28)] sm:min-h-140">
         <div
           aria-hidden={!isSignUp}
           inert={!isSignUp}
-          className={`absolute inset-0 z-0 flex h-full w-full items-center justify-center transition-all duration-[600ms] ease-in-out sm:left-0 sm:w-1/2 ${
+          className={`absolute inset-0 z-0 flex h-full w-full items-center justify-center transition-all duration-600ms ease-in-out sm:left-0 sm:w-1/2 ${
             isSignUp
               ? "opacity-100 sm:z-50 sm:translate-x-full"
               : "pointer-events-none hidden opacity-0 sm:block sm:z-10 sm:translate-x-0"
@@ -241,7 +245,7 @@ export default function AuthPage({ initialMode }: { initialMode: "login" | "regi
         <div
           aria-hidden={isSignUp}
           inert={isSignUp}
-          className={`absolute inset-0 z-20 flex h-full w-full items-center justify-center transition-all duration-[600ms] ease-in-out sm:left-0 sm:w-1/2 ${
+          className={`absolute inset-0 z-20 flex h-full w-full items-center justify-center transition-all duration-600ms ease-in-out sm:left-0 sm:w-1/2 ${
             isSignUp
               ? "pointer-events-none hidden opacity-0 sm:block sm:translate-x-full"
               : "opacity-100 sm:translate-x-0"
@@ -319,22 +323,22 @@ export default function AuthPage({ initialMode }: { initialMode: "login" | "regi
         </div>
 
         <div
-          className={`absolute left-1/2 top-0 z-[100] hidden h-full w-1/2 overflow-hidden transition-transform duration-[600ms] ease-in-out sm:block ${
+          className={`absolute left-1/2 top-0 z-100 hidden h-full w-1/2 overflow-hidden transition-transform duration-600 ease-in-out sm:block ${
             isSignUp ? "-translate-x-full" : "translate-x-0"
           }`}
         >
           <div
-            className={`relative -left-full h-full w-[200%] bg-gradient-to-br from-[#03045e] via-[#023eba] to-[#0077b6] text-white transition-transform duration-[600ms] ease-in-out ${
+            className={`relative -left-full h-full w-[200%] bg-linear-to-br from-[#03045e] via-[#023eba] to-[#0077b6] text-white transition-transform duration-600 ease-in-out ${
               isSignUp ? "translate-x-1/2" : "translate-x-0"
             }`}
           >
             <div
-              className={`absolute top-0 flex h-full w-1/2 flex-col items-center justify-center px-7 text-center transition-transform duration-[600ms] ease-in-out md:px-10 ${
-                isSignUp ? "translate-x-0" : "-translate-x-[20%]"
+              className={`absolute top-0 flex h-full w-1/2 flex-col items-center justify-center px-7 text-center transition-transform duration-600 ease-in-out md:px-10 ${
+                isSignUp ? "translate-x-0" : "translate-x-[20%]"
               }`}
             >
               <h2 className="mb-4 text-[28px] font-bold">Welcome Back!</h2>
-              <p className="mb-8 max-w-[280px] text-sm leading-relaxed">
+              <p className="mb-8 max-w-70 text-sm leading-relaxed">
                 To keep connected with us, please log in with your personal info.
               </p>
               <button
@@ -347,12 +351,12 @@ export default function AuthPage({ initialMode }: { initialMode: "login" | "regi
             </div>
 
             <div
-              className={`absolute right-0 top-0 flex h-full w-1/2 flex-col items-center justify-center px-7 text-center transition-transform duration-[600ms] ease-in-out md:px-10 ${
+              className={`absolute right-0 top-0 flex h-full w-1/2 flex-col items-center justify-center px-7 text-center transition-transform duration-600 ease-in-out md:px-10 ${
                 isSignUp ? "translate-x-[20%]" : "translate-x-0"
               }`}
             >
               <h2 className="mb-4 text-[28px] font-bold">Hello, Friend!</h2>
-              <p className="mb-8 max-w-[280px] text-sm leading-relaxed">
+              <p className="mb-8 max-w-70 text-sm leading-relaxed">
                 Enter your personal details and start your journey with us.
               </p>
               <button

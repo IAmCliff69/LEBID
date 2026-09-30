@@ -9,6 +9,9 @@ import {
   Library,
   BookOpen,
   LogOut,
+  AlertCircle,
+  Sparkles,
+  Calendar,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -41,6 +44,11 @@ const navItems = [
     icon: ClipboardList,
   },
   {
+    label: "AI Assistant",
+    to: "/ai",
+    icon: Sparkles,
+  },
+  {
     label: "Assignments",
     to: "/assignments",
     icon: BookOpen,
@@ -51,9 +59,19 @@ const navItems = [
     icon: GraduationCap,
   },
   {
+    label: "Events",
+    to: "/events",
+    icon: Calendar,
+  },
+  {
     label: "Analytics",
     to: "/analytics",
     icon: BarChart2,
+  },
+  {
+    label: "Conflict Checker",
+    to: "/conflicts",
+    icon: AlertCircle,
   },
 ];
 

@@ -9,11 +9,15 @@ import type {
   StudySessionPriority,
 } from "@/api/studySessions";
 import type { Course } from "@/api/courses";
+import { checkConflicts } from "@/api/conflicts";
+import type { ConflictItem } from "@/api/conflicts";
+
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import ConflictWarning from "@/components/conflicts/ConflictWarning";
 
 import {
   Dialog,
@@ -91,10 +95,47 @@ export default function RescheduleStudySessionDialog({
     handleSubmit,
     control,
     reset,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
+
+  // Conflict state
+const [conflicts, setConflicts] = useState<ConflictItem[]>([]);
+
+// Watch the three fields that determine a conflict
+const sessionDate = watch("session_date");
+const startTime = watch("start_time");
+const endTime = watch("end_time");
+
+// Automatically check for conflicts whenever the student fills in date + times
+useEffect(() => {
+  if (!sessionDate || !startTime || !endTime || endTime <= startTime) {
+    setConflicts([]);
+    return;
+  }
+
+  let cancelled = false;
+
+  checkConflicts({
+    check_date: sessionDate,
+    start_time: startTime,
+    end_time: endTime,
+    // ONLY in EditStudySessionDialog add the next line:
+    // exclude_session_id: session?.id,
+  })
+    .then((res) => {
+      if (!cancelled) setConflicts(res.conflicts);
+    })
+    .catch(() => {
+      if (!cancelled) setConflicts([]);
+    });
+
+  return () => {
+    cancelled = true;
+  };
+}, [sessionDate, startTime, endTime /*, session?.id if you used it */]);
 
   // Pre-fill with the original session's values so the student
   // only has to change what actually moved (usually just the date/time).
@@ -344,6 +385,9 @@ export default function RescheduleStudySessionDialog({
               {...register("notes")}
             />
           </div>
+
+          {/* Conflict warning – shows automatically when there are clashes */}
+            <ConflictWarning conflicts={conflicts} />
 
           {/* Server error */}
           {serverError && (

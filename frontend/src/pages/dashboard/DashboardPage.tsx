@@ -147,7 +147,7 @@ export default function DashboardPage() {
                 <Link
                   key={action.href}
                   to={action.href}
-                  className="group flex items-center gap-4 rounded-2xl border border-border bg-card p-4 transition-all duration-200 hover:border-primary/30 hover:bg-primary/[0.03] hover:shadow-sm"
+                  className="group flex items-center gap-4 rounded-2xl border border-border bg-card p-4 transition-all duration-200 hover:border-primary/30 hover:bg-primary/3 hover:shadow-sm"
                 >
                   <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted text-foreground transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
                     <Icon className="size-5" />

@@ -640,7 +640,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
 
   if (loading) {
     return (
-      <div className="flex min-h-[600px] items-center justify-center">
+      <div className="flex min-h-150 items-center justify-center">
         <div className="flex flex-col items-center">
           <div
             className="mb-3 h-7 w-7 animate-spin rounded-full border-2 border-slate-200"
@@ -1977,7 +1977,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
         selectedEvent) && (
         <div
           ref={popupRef}
-          className="fixed z-[70] max-h-[calc(100vh-24px)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_20px_55px_rgba(15,23,42,0.18)] ring-1 ring-black/5"
+          className="fixed z-70 max-h-[calc(100vh-24px)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_20px_55px_rgba(15,23,42,0.18)] ring-1 ring-black/5"
           style={{
             top: popupPosition.top,
             left: popupPosition.left,
