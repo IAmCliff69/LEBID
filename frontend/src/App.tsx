@@ -13,9 +13,13 @@ import StudyPlannerPage from "@/pages/planner/StudyPlannerPage";
 import TasksPage from "@/pages/tasks/TasksPage";
 import AssignmentsPage from "@/pages/assignments/AssignmentsPage";
 import ExamsPage from "@/pages/exams/ExamsPage";
+import EventsPage from "@/pages/events/EventsPage";
+import AiAssistantPage from "@/pages/ai/AiAssistantPage";
+import NotificationsPage from "@/pages/notifications/NotificationsPage";
 import AnalyticsPage from "@/pages/analytics/AnalyticsPage";
 import CoursesPage from "@/pages/courses/CoursesPage";
 import ProfilePage from "@/pages/profile/ProfilePage";
+import ConflictCheckerPage from "@/pages/conflicts/ConflictCheckerPage";  // ← add
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -133,7 +137,39 @@ export default function App() {
               </ProtectedLayout>
             }
           />
+          <Route
+            path="/events"
+            element={
+              <ProtectedLayout title="Events">
+                <EventsPage />
+              </ProtectedLayout>
+            }
+          />
+           <Route
+            path="/ai"
+            element={
+              <ProtectedLayout title="AI Assistant">
+                <AiAssistantPage />
+              </ProtectedLayout>
+            }
+          />  
+          <Route
+            path="/notifications"
+            element={
+              <ProtectedLayout title="Notifications" showTopBar>
+                <NotificationsPage />
+              </ProtectedLayout>
+            }
+          />  
 
+                    <Route
+            path="/conflicts"
+            element={
+              <ProtectedLayout title="Conflict Checker">
+                <ConflictCheckerPage />
+              </ProtectedLayout>
+            }
+          />
           <Route
             path="/analytics"
             element={
