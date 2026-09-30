@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 
 import AddTaskDialog from "@/components/tasks/AddTaskDialog";
 
+<<<<<<< HEAD
 import { getTasks, updateTask, deleteTask } from "@/api/tasks";
 
 import type { Task } from "@/api/tasks";
@@ -15,6 +16,13 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+=======
+import { getTasks, updateTask } from "@/api/tasks";
+
+import type { Task } from "@/api/tasks";
+
+import { ClipboardList, Circle, CheckCircle2 } from "lucide-react";
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
 
 import { cn } from "@/lib/utils";
 
@@ -37,6 +45,7 @@ function formatDeadline(deadline: string): string {
   });
 }
 
+<<<<<<< HEAD
 // A task is overdue when its deadline has passed
 // and it has not been completed.
 function isOverdue(task: Task): boolean {
@@ -47,11 +56,16 @@ function isOverdue(task: Task): boolean {
   return new Date(task.deadline).getTime() < Date.now();
 }
 
+=======
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
 export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+<<<<<<< HEAD
   const [deletingId, setDeletingId] = useState<string | null>(null);
+=======
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -90,6 +104,7 @@ export default function TasksPage() {
     }
   };
 
+<<<<<<< HEAD
   const handleDelete = async (task: Task) => {
     if (!confirm(`Delete "${task.title}"? This cannot be undone.`)) return;
 
@@ -122,6 +137,14 @@ export default function TasksPage() {
   // Completed tasks
   const completedTasks = tasks.filter(
     (task) => task.status === "completed"
+=======
+  const incompleteTasks = tasks.filter(
+    (t) => t.status !== "completed"
+  );
+
+  const completedTasks = tasks.filter(
+    (t) => t.status === "completed"
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
   );
 
   return (
@@ -130,7 +153,10 @@ export default function TasksPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Tasks</h2>
+<<<<<<< HEAD
 
+=======
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
           <p className="text-muted-foreground text-sm mt-1">
             Your academic and personal tasks.
           </p>
@@ -158,9 +184,13 @@ export default function TasksPage() {
         <div className="border border-dashed border-border rounded-2xl p-12 text-center">
           <ClipboardList className="size-8 text-muted-foreground mx-auto mb-3" />
 
+<<<<<<< HEAD
           <p className="text-sm font-medium">
             No tasks yet
           </p>
+=======
+          <p className="text-sm font-medium">No tasks yet</p>
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
 
           <p className="text-muted-foreground text-xs mt-1">
             Add your first task to get started.
@@ -168,6 +198,7 @@ export default function TasksPage() {
         </div>
       )}
 
+<<<<<<< HEAD
       {/* Overdue tasks */}
       {!isLoading && overdueTasks.length > 0 && (
         <div className="space-y-2">
@@ -184,10 +215,17 @@ export default function TasksPage() {
           </div>
 
           {overdueTasks.map((task) => (
+=======
+      {/* Incomplete tasks */}
+      {!isLoading && incompleteTasks.length > 0 && (
+        <div className="space-y-2">
+          {incompleteTasks.map((task) => (
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
             <TaskCard
               key={task.id}
               task={task}
               onToggle={handleToggleComplete}
+<<<<<<< HEAD
               onDelete={handleDelete}
               isDeleting={deletingId === String(task.id)}
               isOverdue
@@ -212,6 +250,8 @@ export default function TasksPage() {
               onToggle={handleToggleComplete}
               onDelete={handleDelete}
               isDeleting={deletingId === String(task.id)}
+=======
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
             />
           ))}
         </div>
@@ -229,8 +269,11 @@ export default function TasksPage() {
               key={task.id}
               task={task}
               onToggle={handleToggleComplete}
+<<<<<<< HEAD
               onDelete={handleDelete}
               isDeleting={deletingId === String(task.id)}
+=======
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
             />
           ))}
         </div>
@@ -243,6 +286,7 @@ export default function TasksPage() {
 function TaskCard({
   task,
   onToggle,
+<<<<<<< HEAD
   onDelete,
   isDeleting,
   isOverdue: overdue = false,
@@ -252,6 +296,11 @@ function TaskCard({
   onDelete: (task: Task) => void;
   isDeleting: boolean;
   isOverdue?: boolean;
+=======
+}: {
+  task: Task;
+  onToggle: (task: Task) => void;
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
 }) {
   const isCompleted = task.status === "completed";
 
@@ -259,10 +308,14 @@ function TaskCard({
     <div
       className={cn(
         "bg-card border border-border rounded-xl px-4 py-3 flex items-start gap-3 transition-opacity",
+<<<<<<< HEAD
         isCompleted && "opacity-50",
         overdue &&
           !isCompleted &&
           "border-destructive/30 bg-destructive/[0.03]"
+=======
+        isCompleted && "opacity-50"
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
       )}
     >
       {/* Complete toggle */}
@@ -289,6 +342,10 @@ function TaskCard({
             {task.title}
           </p>
 
+<<<<<<< HEAD
+=======
+          {/* Priority badge */}
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
           <span
             className={cn(
               "text-xs px-2 py-0.5 rounded-full font-medium shrink-0",
@@ -299,6 +356,10 @@ function TaskCard({
           </span>
         </div>
 
+<<<<<<< HEAD
+=======
+        {/* Course and deadline */}
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
         <div className="flex items-center gap-3 mt-1">
           {task.course_code && (
             <span
@@ -314,6 +375,7 @@ function TaskCard({
           )}
 
           {task.deadline && (
+<<<<<<< HEAD
             <span
               className={cn(
                 "text-xs",
@@ -324,6 +386,10 @@ function TaskCard({
             >
               {overdue && !isCompleted ? "Overdue · " : "Due "}
               {formatDeadline(task.deadline)}
+=======
+            <span className="text-xs text-muted-foreground">
+              Due {formatDeadline(task.deadline)}
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
             </span>
           )}
         </div>
@@ -334,6 +400,7 @@ function TaskCard({
           </p>
         )}
       </div>
+<<<<<<< HEAD
 
       {/* Delete button */}
       <Button
@@ -348,3 +415,8 @@ function TaskCard({
     </div>
   );
 }
+=======
+    </div>
+  );
+}
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e

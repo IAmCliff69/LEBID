@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { useState, useEffect } from "react";
 import { GraduationCap } from "lucide-react";
 
@@ -209,10 +210,22 @@ export default function ExamsPage() {
         </div>
       )}
 
+=======
+export default function ExamsPage() {
+  return (
+    <div className="max-w-4xl mx-auto">
+      <div>
+        <h2 className="text-2xl font-bold">Exams</h2>
+        <p className="text-muted-foreground text-sm mt-1">
+          Manage your upcoming examinations.
+        </p>
+      </div>
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
     </div>
   );
 }
 
+<<<<<<< HEAD
 // ---------------------------------------------------------------------------
 // ExamCard
 // ---------------------------------------------------------------------------
@@ -371,3 +384,5 @@ function ExamCard({
     </div>
   );
 }
+=======
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e

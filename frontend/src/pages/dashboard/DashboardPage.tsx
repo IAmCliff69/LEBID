@@ -55,8 +55,12 @@ const quickActions = [
 export default function DashboardPage() {
   const { user } = useAuth();
 
+<<<<<<< HEAD
   const firstName =
   user?.full_name?.split(" ")[0] ?? "Student";
+=======
+  const firstName = user?.name?.split(" ")[0] ?? "Student";
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
 
   return (
     <>

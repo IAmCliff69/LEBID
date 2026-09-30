@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 
 import AddAssignmentDialog from "@/components/assignments/AddAssignmentDialog";
 
+<<<<<<< HEAD
 import {
   getAssignments,
   updateAssignment,
@@ -23,6 +24,16 @@ import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 
+=======
+import { getAssignments, updateAssignment } from "@/api/assignments";
+
+import type { Assignment } from "@/api/assignments";
+
+import { BookOpen, Circle, CheckCircle2 } from "lucide-react";
+
+import { cn } from "@/lib/utils";
+
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
 const PRIORITY_STYLES: Record<string, string> = {
   low: "bg-slate-100 text-slate-600",
   medium: "bg-blue-50 text-blue-600",
@@ -40,6 +51,7 @@ function formatDeadline(deadline: string): string {
   });
 }
 
+<<<<<<< HEAD
 // An assignment is upcoming when:
 // - it is not completed
 // - it has a deadline
@@ -70,11 +82,16 @@ function isOverdue(assignment: Assignment): boolean {
   return new Date(assignment.deadline).getTime() < Date.now();
 }
 
+=======
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
 export default function AssignmentsPage() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+<<<<<<< HEAD
   const [deletingId, setDeletingId] = useState<string | null>(null);
+=======
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
 
   useEffect(() => {
     const fetchAssignments = async () => {
@@ -82,9 +99,13 @@ export default function AssignmentsPage() {
         const data = await getAssignments();
         setAssignments(data);
       } catch {
+<<<<<<< HEAD
         setError(
           "Failed to load assignments. Please refresh the page."
         );
+=======
+        setError("Failed to load assignments. Please refresh the page.");
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
       } finally {
         setIsLoading(false);
       }
@@ -97,6 +118,7 @@ export default function AssignmentsPage() {
     setAssignments((prev) => [assignment, ...prev]);
   };
 
+<<<<<<< HEAD
   const handleToggleComplete = async (
     assignment: Assignment
   ) => {
@@ -104,6 +126,11 @@ export default function AssignmentsPage() {
       assignment.status === "completed"
         ? "not_started"
         : "completed";
+=======
+  const handleToggleComplete = async (assignment: Assignment) => {
+    const newStatus =
+      assignment.status === "completed" ? "not_started" : "completed";
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
 
     try {
       const updated = await updateAssignment(assignment.id, {
@@ -111,15 +138,20 @@ export default function AssignmentsPage() {
       });
 
       setAssignments((prev) =>
+<<<<<<< HEAD
         prev.map((a) =>
           a.id === assignment.id ? updated : a
         )
+=======
+        prev.map((a) => (a.id === assignment.id ? updated : a))
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
       );
     } catch {
       console.error("Failed to update assignment status");
     }
   };
 
+<<<<<<< HEAD
   const handleDelete = async (assignment: Assignment) => {
     if (
       !confirm(
@@ -160,24 +192,36 @@ export default function AssignmentsPage() {
   const completedAssignments = assignments.filter(
     (assignment) => assignment.status === "completed"
   );
+=======
+  const incomplete = assignments.filter((a) => a.status !== "completed");
+  const completed = assignments.filter((a) => a.status === "completed");
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
+<<<<<<< HEAD
           <h2 className="text-2xl font-bold">
             Assignments
           </h2>
 
+=======
+          <h2 className="text-2xl font-bold">Assignments</h2>
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
           <p className="text-muted-foreground text-sm mt-1">
             Track your assignments and submission deadlines.
           </p>
         </div>
 
+<<<<<<< HEAD
         <AddAssignmentDialog
           onAssignmentAdded={handleAssignmentAdded}
         />
+=======
+        <AddAssignmentDialog onAssignmentAdded={handleAssignmentAdded} />
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
       </div>
 
       {/* Loading */}
@@ -190,13 +234,18 @@ export default function AssignmentsPage() {
       {/* Error */}
       {error && (
         <div className="bg-destructive/10 border border-destructive/20 rounded-lg px-4 py-3">
+<<<<<<< HEAD
           <p className="text-destructive text-sm">
             {error}
           </p>
+=======
+          <p className="text-destructive text-sm">{error}</p>
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
         </div>
       )}
 
       {/* Empty state */}
+<<<<<<< HEAD
       {!isLoading &&
         !error &&
         assignments.length === 0 && (
@@ -229,19 +278,41 @@ export default function AssignmentsPage() {
           </div>
 
           {upcomingAssignments.map((assignment) => (
+=======
+      {!isLoading && !error && assignments.length === 0 && (
+        <div className="border border-dashed border-border rounded-2xl p-12 text-center">
+          <BookOpen className="size-8 text-muted-foreground mx-auto mb-3" />
+
+          <p className="text-sm font-medium">No assignments yet</p>
+
+          <p className="text-muted-foreground text-xs mt-1">
+            Add your first assignment to get started.
+          </p>
+        </div>
+      )}
+
+      {/* Incomplete */}
+      {!isLoading && incomplete.length > 0 && (
+        <div className="space-y-2">
+          {incomplete.map((assignment) => (
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
             <AssignmentCard
               key={assignment.id}
               assignment={assignment}
               onToggle={handleToggleComplete}
+<<<<<<< HEAD
               onDelete={handleDelete}
               isDeleting={
                 deletingId === assignment.id
               }
+=======
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
             />
           ))}
         </div>
       )}
 
+<<<<<<< HEAD
       {/* Overdue assignments */}
       {!isLoading && overdueAssignments.length > 0 && (
         <div className="space-y-2">
@@ -258,19 +329,33 @@ export default function AssignmentsPage() {
           </div>
 
           {overdueAssignments.map((assignment) => (
+=======
+      {/* Completed */}
+      {!isLoading && completed.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide px-1">
+            Completed
+          </p>
+
+          {completed.map((assignment) => (
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
             <AssignmentCard
               key={assignment.id}
               assignment={assignment}
               onToggle={handleToggleComplete}
+<<<<<<< HEAD
               onDelete={handleDelete}
               isDeleting={
                 deletingId === assignment.id
               }
               isOverdue
+=======
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
             />
           ))}
         </div>
       )}
+<<<<<<< HEAD
 
       {/* Completed assignments */}
       {!isLoading &&
@@ -313,6 +398,8 @@ export default function AssignmentsPage() {
             </p>
           </div>
         )}
+=======
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
     </div>
   );
 }
@@ -320,6 +407,7 @@ export default function AssignmentsPage() {
 function AssignmentCard({
   assignment,
   onToggle,
+<<<<<<< HEAD
   onDelete,
   isDeleting,
   isOverdue: overdue = false,
@@ -329,6 +417,11 @@ function AssignmentCard({
   onDelete: (assignment: Assignment) => void;
   isDeleting: boolean;
   isOverdue?: boolean;
+=======
+}: {
+  assignment: Assignment;
+  onToggle: (assignment: Assignment) => void;
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
 }) {
   const isCompleted = assignment.status === "completed";
 
@@ -336,10 +429,14 @@ function AssignmentCard({
     <div
       className={cn(
         "bg-card border border-border rounded-xl px-4 py-3 flex items-start gap-3 transition-opacity",
+<<<<<<< HEAD
         isCompleted && "opacity-50",
         overdue &&
           !isCompleted &&
           "border-destructive/30 bg-destructive/[0.03]"
+=======
+        isCompleted && "opacity-50"
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
       )}
     >
       {/* Complete toggle */}
@@ -360,8 +457,12 @@ function AssignmentCard({
           <p
             className={cn(
               "text-sm font-medium",
+<<<<<<< HEAD
               isCompleted &&
                 "line-through text-muted-foreground"
+=======
+              isCompleted && "line-through text-muted-foreground"
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
             )}
           >
             {assignment.title}
@@ -383,11 +484,16 @@ function AssignmentCard({
               className="text-xs font-medium px-1.5 py-0.5 rounded"
               style={{
                 backgroundColor:
+<<<<<<< HEAD
                   (assignment.course_color ??
                     "#64748b") + "22",
                 color:
                   assignment.course_color ??
                   "#64748b",
+=======
+                  (assignment.course_color ?? "#64748b") + "22",
+                color: assignment.course_color ?? "#64748b",
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
               }}
             >
               {assignment.course_code}
@@ -395,6 +501,7 @@ function AssignmentCard({
           )}
 
           {assignment.deadline && (
+<<<<<<< HEAD
             <span
               className={cn(
                 "text-xs",
@@ -407,6 +514,10 @@ function AssignmentCard({
                 ? "Overdue · "
                 : "Due "}
               {formatDeadline(assignment.deadline)}
+=======
+            <span className="text-xs text-muted-foreground">
+              Due {formatDeadline(assignment.deadline)}
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
             </span>
           )}
 
@@ -423,6 +534,7 @@ function AssignmentCard({
           </p>
         )}
       </div>
+<<<<<<< HEAD
 
       {/* Delete button */}
       <Button
@@ -437,3 +549,8 @@ function AssignmentCard({
     </div>
   );
 }
+=======
+    </div>
+  );
+}
+>>>>>>> b74a0f9e4fa401d536ad40e316075040a1c5632e
