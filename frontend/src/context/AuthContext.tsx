@@ -1,8 +1,10 @@
+/* eslint-disable react-refresh/only-export-components */
+
 import { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
-import { useLocation } from "react-router-dom";
 import { getMe, logout as logoutApi } from "@/api/auth";
 import type { User } from "@/api/auth";
+import { SESSION_EXPIRED_EVENT } from "@/api/client";
 
 interface AuthContextType {
   user: User | null;
@@ -15,31 +17,40 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { pathname } = useLocation();
-  const isPublicAuthRoute = pathname === "/login" || pathname === "/register";
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Check for an existing session ONCE, when the app opens.
+  // The HttpOnly cookie is sent automatically; if it is valid, /auth/me
+  // returns the user, otherwise it fails and we treat them as logged out.
   useEffect(() => {
-    if (isPublicAuthRoute) {
-      setIsLoading(false);
-      return;
-    }
+    let cancelled = false;
 
-    setIsLoading(true);
     const checkSession = async () => {
       try {
         const currentUser = await getMe();
-        setUser(currentUser);
+        if (!cancelled) setUser(currentUser);
       } catch {
-        setUser(null);
+        if (!cancelled) setUser(null);
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
 
     checkSession();
-  }, [isPublicAuthRoute]);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // If any later API call gets a 401, the session is no longer valid.
+  // Clearing the user makes ProtectedRoute redirect to /login (no reload).
+  useEffect(() => {
+    const handleSessionExpired = () => setUser(null);
+    window.addEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
+    return () =>
+      window.removeEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
+  }, []);
 
   const logout = async () => {
     await logoutApi();

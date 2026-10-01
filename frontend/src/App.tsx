@@ -1,11 +1,14 @@
+import { useCallback, useState } from "react";
 import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
-import { AuthProvider } from "@/context/AuthContext";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/common/ProtectedRoute";
+import PublicOnlyRoute from "@/components/common/PublicOnlyRoute";
 import AppLayout from "@/components/layout/AppLayout";
-import NotificationsPage from "@/pages/notifications/NotificationsPage";  // ← add
+import SplashScreen from "@/components/splash/SplashScreen";
+import NotificationsPage from "@/pages/notifications/NotificationsPage";
 
 import AuthPage from "@/pages/auth/AuthPage";
 import DashboardPage from "@/pages/dashboard/DashboardPage";
@@ -20,7 +23,7 @@ import CoursesPage from "@/pages/courses/CoursesPage";
 import ProfilePage from "@/pages/profile/ProfilePage";
 import AiAssistantPage from "@/pages/ai/AiAssistantPage";
 import TimetableImportPage from "@/pages/timetable/TimetableImportPage";
-import ConflictCheckerPage from "@/pages/conflicts/ConflictCheckerPage";  // ← add
+import ConflictCheckerPage from "@/pages/conflicts/ConflictCheckerPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -58,156 +61,180 @@ function AuthLayout() {
   );
 }
 
+// Everything that depends on the session lives here, inside AuthProvider.
+// The session check starts as soon as the app opens, while the splash plays.
+function AppRoutes() {
+  const { isLoading } = useAuth();
+
+  // The splash shows once every time the app is opened (page load/refresh).
+  const [splashDone, setSplashDone] = useState(false);
+  const finishSplash = useCallback(() => setSplashDone(true), []);
+
+  // 1. Splash always plays first (~3 seconds).
+  if (!splashDone) {
+    return <SplashScreen onComplete={finishSplash} />;
+  }
+
+  // 2. If the session check is somehow still running, wait on a blank
+  //    background rather than flashing the wrong page.
+  if (isLoading) {
+    return <div className="min-h-screen bg-background" />;
+  }
+
+  // 3. Session known: Dashboard (valid session) or Auth (no session).
+  return (
+    <Routes>
+      {/* Public routes — logged-in users are sent to the Dashboard */}
+      <Route
+        element={
+          <PublicOnlyRoute>
+            <AuthLayout />
+          </PublicOnlyRoute>
+        }
+      >
+        <Route path="/login" element={<></>} />
+        <Route path="/register" element={<></>} />
+      </Route>
+
+      {/* Protected routes */}
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedLayout title="Dashboard" showTopBar>
+            <DashboardPage />
+          </ProtectedLayout>
+        }
+      />
+
+      <Route
+        path="/courses"
+        element={
+          <ProtectedLayout title="Courses">
+            <CoursesPage />
+          </ProtectedLayout>
+        }
+      />
+
+      {/* Profile */}
+      <Route
+        path="/profile"
+        element={
+          <ProtectedLayout title="Profile">
+            <ProfilePage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/timetable-import"
+        element={
+          <ProtectedLayout title="Import Timetable">
+            <TimetableImportPage />
+          </ProtectedLayout>
+        }
+      />
+
+      <Route
+        path="/timetable"
+        element={
+          <ProtectedLayout title="Timetable">
+            <TimetablePage />
+          </ProtectedLayout>
+        }
+      />
+
+      <Route
+        path="/planner"
+        element={
+          <ProtectedLayout title="Study Planner">
+            <StudyPlannerPage />
+          </ProtectedLayout>
+        }
+      />
+
+      <Route
+        path="/conflicts"
+        element={
+          <ProtectedLayout title="Conflict Checker">
+            <ConflictCheckerPage />
+          </ProtectedLayout>
+        }
+      />
+
+      <Route
+        path="/ai"
+        element={
+          <ProtectedLayout title="AI Assistant">
+            <AiAssistantPage />
+          </ProtectedLayout>
+        }
+      />
+
+      <Route
+        path="/notifications"
+        element={
+          <ProtectedLayout title="Notifications" showTopBar>
+            <NotificationsPage />
+          </ProtectedLayout>
+        }
+      />
+
+      <Route
+        path="/tasks"
+        element={
+          <ProtectedLayout title="Tasks">
+            <TasksPage />
+          </ProtectedLayout>
+        }
+      />
+
+      <Route
+        path="/assignments"
+        element={
+          <ProtectedLayout title="Assignments">
+            <AssignmentsPage />
+          </ProtectedLayout>
+        }
+      />
+
+      <Route
+        path="/exams"
+        element={
+          <ProtectedLayout title="Exams">
+            <ExamsPage />
+          </ProtectedLayout>
+        }
+      />
+
+      <Route
+        path="/events"
+        element={
+          <ProtectedLayout title="Events">
+            <EventsPage />
+          </ProtectedLayout>
+        }
+      />
+
+      <Route
+        path="/analytics"
+        element={
+          <ProtectedLayout title="Analytics">
+            <AnalyticsPage />
+          </ProtectedLayout>
+        }
+      />
+
+      {/* Default routes */}
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+    </Routes>
+  );
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <Routes>
-          {/* Public routes */}
-          <Route element={<AuthLayout />}>
-            <Route path="/login" element={<></>} />
-            <Route path="/register" element={<></>} />
-          </Route>
-
-          {/* Protected routes */}
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedLayout title="Dashboard" showTopBar>
-                <DashboardPage />
-              </ProtectedLayout>
-            }
-          />
-
-          <Route
-            path="/courses"
-            element={
-              <ProtectedLayout title="Courses">
-                <CoursesPage />
-              </ProtectedLayout>
-            }
-          />
-
-          {/* Profile */}
-          <Route
-            path="/profile"
-            element={
-              <ProtectedLayout title="Profile">
-                <ProfilePage />
-              </ProtectedLayout>
-            }
-          />
-          <Route
-            path="/timetable-import"
-            element={
-              <ProtectedLayout title="Import Timetable">
-                <TimetableImportPage />
-              </ProtectedLayout>
-            }
-          />
-
-          <Route
-            path="/timetable"
-            element={
-              <ProtectedLayout title="Timetable">
-                <TimetablePage />
-              </ProtectedLayout>
-            }
-          />
-                    
-
-          <Route
-            path="/planner"
-            element={
-              <ProtectedLayout title="Study Planner">
-                <StudyPlannerPage />
-              </ProtectedLayout>
-            }
-          />
-
-                    <Route
-            path="/conflicts"
-            element={
-              <ProtectedLayout title="Conflict Checker">
-                <ConflictCheckerPage />
-              </ProtectedLayout>
-            }
-          />
-
-          <Route
-            path="/ai"
-            element={
-              <ProtectedLayout title="AI Assistant">
-                <AiAssistantPage />
-              </ProtectedLayout>
-            }
-          />
-
-          <Route
-            path="/notifications"
-            element={
-              <ProtectedLayout title="Notifications" showTopBar>
-                <NotificationsPage />
-              </ProtectedLayout>
-            }
-          />
-
-          <Route
-            path="/tasks"
-            element={
-              <ProtectedLayout title="Tasks">
-                <TasksPage />
-              </ProtectedLayout>
-            }
-          />
-
-          <Route
-            path="/assignments"
-            element={
-              <ProtectedLayout title="Assignments">
-                <AssignmentsPage />
-              </ProtectedLayout>
-            }
-          />
-
-          <Route
-            path="/exams"
-            element={
-              <ProtectedLayout title="Exams">
-                <ExamsPage />
-              </ProtectedLayout>
-            }
-          />
-
-          <Route
-            path="/events"
-            element={
-              <ProtectedLayout title="Events">
-                <EventsPage />
-              </ProtectedLayout>
-            }
-          />
-
-          <Route
-            path="/analytics"
-            element={
-              <ProtectedLayout title="Analytics">
-                <AnalyticsPage />
-              </ProtectedLayout>
-            }
-          />
-
-          {/* Default routes */}
-          <Route
-            path="/"
-            element={<Navigate to="/dashboard" replace />}
-          />
-
-          <Route
-            path="*"
-            element={<Navigate to="/dashboard" replace />}
-          />
-        </Routes>
+        <AppRoutes />
       </AuthProvider>
     </QueryClientProvider>
   );
