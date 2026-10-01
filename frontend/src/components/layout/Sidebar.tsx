@@ -10,69 +10,25 @@ import {
   BookOpen,
   LogOut,
   AlertCircle,
-  Sparkles,
   Calendar,
+  FileUp,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 
 const navItems = [
-  {
-    label: "Dashboard",
-    to: "/dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    label: "Courses",
-    to: "/courses",
-    icon: Library,
-  },
-  {
-    label: "Timetable",
-    to: "/timetable",
-    icon: CalendarDays,
-  },
-  {
-    label: "Study Planner",
-    to: "/planner",
-    icon: CalendarClock,
-  },
-  {
-    label: "Tasks",
-    to: "/tasks",
-    icon: ClipboardList,
-  },
-  {
-    label: "AI Assistant",
-    to: "/ai",
-    icon: Sparkles,
-  },
-  {
-    label: "Assignments",
-    to: "/assignments",
-    icon: BookOpen,
-  },
-  {
-    label: "Exams",
-    to: "/exams",
-    icon: GraduationCap,
-  },
-  {
-    label: "Events",
-    to: "/events",
-    icon: Calendar,
-  },
-  {
-    label: "Analytics",
-    to: "/analytics",
-    icon: BarChart2,
-  },
-  {
-    label: "Conflict Checker",
-    to: "/conflicts",
-    icon: AlertCircle,
-  },
+  { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
+  { label: "Courses", to: "/courses", icon: Library },
+  { label: "Timetable", to: "/timetable", icon: CalendarDays },
+  { label: "Study Planner", to: "/planner", icon: CalendarClock },
+  { label: "Tasks", to: "/tasks", icon: ClipboardList },
+  { label: "Assignments", to: "/assignments", icon: BookOpen },
+  { label: "Exams", to: "/exams", icon: GraduationCap },
+  { label: "Events", to: "/events", icon: Calendar },
+  { label: "Analytics", to: "/analytics", icon: BarChart2 },
+  { label: "Import Timetable", to: "/timetable-import", icon: FileUp },
+  { label: "Conflict Checker", to: "/conflicts", icon: AlertCircle },
 ];
 
 export default function Sidebar() {
@@ -96,49 +52,45 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Navigation */}
+      {/* Navigation — flex column that fills all available space and
+          distributes items evenly so nothing is ever clipped */}
       <nav
         aria-label="Main navigation"
-        className="flex-1 overflow-hidden px-2 py-4"
+        className="flex flex-1 flex-col px-2 py-3"
       >
-        <div className="space-y-2">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              title={item.label}
-              aria-label={item.label}
-              className={({ isActive }) =>
-                cn(
-                  "group flex h-11 w-full items-center justify-center rounded-xl",
-                  "transition-all duration-200",
-                  "focus-visible:outline-2 focus-visible:outline-offset-2",
-                  "focus-visible:outline-sidebar-ring",
-
-                  isActive
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
-                    : "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                )
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <item.icon
-                    className={cn(
-                      "size-5.5 shrink-0 transition-transform duration-200",
-                      !isActive && "group-hover:scale-105"
-                    )}
-                    strokeWidth={isActive ? 2.4 : 2}
-                  />
-
-                  <span className="sr-only">
-                    {item.label}
-                  </span>
-                </>
-              )}
-            </NavLink>
-          ))}
-        </div>
+        {navItems.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            title={item.label}
+            aria-label={item.label}
+            className={({ isActive }) =>
+              cn(
+                // Each item stretches to fill its equal share of the nav height
+                "group flex flex-1 w-full items-center justify-center rounded-xl",
+                "transition-all duration-200 min-h-0",
+                "focus-visible:outline-2 focus-visible:outline-offset-2",
+                "focus-visible:outline-sidebar-ring",
+                isActive
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
+                  : "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              )
+            }
+          >
+            {({ isActive }) => (
+              <>
+                <item.icon
+                  className={cn(
+                    "size-5 shrink-0 transition-transform duration-200",
+                    !isActive && "group-hover:scale-105"
+                  )}
+                  strokeWidth={isActive ? 2.4 : 2}
+                />
+                <span className="sr-only">{item.label}</span>
+              </>
+            )}
+          </NavLink>
+        ))}
       </nav>
 
       {/* Logout */}

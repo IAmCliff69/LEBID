@@ -59,7 +59,7 @@ export default function TimetablePage() {
 
   return (
     <>
-      <div className="mx-auto max-w-[1400px] space-y-8">
+      <div className="calendar-theme-preserved mx-auto max-w-[1400px] space-y-8">
         <section className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <div className="mb-3 flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">

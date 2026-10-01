@@ -19,6 +19,7 @@ import AnalyticsPage from "@/pages/analytics/AnalyticsPage";
 import CoursesPage from "@/pages/courses/CoursesPage";
 import ProfilePage from "@/pages/profile/ProfilePage";
 import AiAssistantPage from "@/pages/ai/AiAssistantPage";
+import TimetableImportPage from "@/pages/timetable/TimetableImportPage";
 import ConflictCheckerPage from "@/pages/conflicts/ConflictCheckerPage";  // ← add
 
 const queryClient = new QueryClient({
@@ -33,7 +34,7 @@ const queryClient = new QueryClient({
 function ProtectedLayout({
   children,
   title,
-  showTopBar = false,
+  showTopBar = true,
 }: {
   children: ReactNode;
   title: string;
@@ -92,6 +93,14 @@ export default function App() {
               </ProtectedLayout>
             }
           />
+          <Route
+            path="/timetable-import"
+            element={
+              <ProtectedLayout title="Import Timetable">
+                <TimetableImportPage />
+              </ProtectedLayout>
+            }
+          />
 
           <Route
             path="/timetable"
@@ -101,6 +110,7 @@ export default function App() {
               </ProtectedLayout>
             }
           />
+                    
 
           <Route
             path="/planner"

@@ -43,7 +43,7 @@ function LebidBrand() {
     <div className="mb-5 flex items-center gap-3">
       <div
         aria-hidden="true"
-        className="relative flex size-12 items-center justify-center rounded-2xl bg-[#fbb02d] text-[#03045e] shadow-[0_8px_18px_rgba(251,176,45,0.28)] ring-1 ring-[#e9a21f]"
+        className="relative flex size-12 items-center justify-center rounded-2xl bg-[#fbb02d] text-[#1e6ae0] shadow-[0_8px_18px_rgba(251,176,45,0.28)] ring-1 ring-[#e9a21f]"
       >
         <span className="-mt-0.5 text-[26px] font-extrabold leading-none">L</span>
         <span className="absolute bottom-2 left-3 h-1 w-3 rounded-full bg-[#00b4d8]" />
@@ -121,7 +121,7 @@ export default function AuthPage({ initialMode }: { initialMode: "login" | "regi
   };
 
   const inputClassName =
-    "my-1.5 w-full rounded-lg border border-[#d1e8f0] bg-[#f4fbff] px-4 py-3 text-sm text-[#03045e] outline-none transition placeholder:text-[#456476] focus:border-[#00b4d8] focus:bg-white focus:ring-2 focus:ring-[#00b4d8]/15";
+    "my-1.5 w-full rounded-lg border border-[#d1e8f0] bg-[#f4fbff] px-4 py-3 text-sm text-[#1e6ae0] outline-none transition placeholder:text-[#456476] focus:border-[#00b4d8] focus:bg-white focus:ring-2 focus:ring-[#00b4d8]/15";
   const submitClassName =
     "mt-3 rounded-full border border-[#023eba] bg-[#023eba] px-11 py-3 text-[13px] font-semibold uppercase tracking-wider text-white shadow-[0_8px_18px_rgba(2,62,186,0.2)] transition hover:border-[#0077b6] hover:bg-[#0077b6] active:scale-95 disabled:cursor-wait disabled:opacity-70";
   const authPanelStyle = {
@@ -135,13 +135,13 @@ export default function AuthPage({ initialMode }: { initialMode: "login" | "regi
 
   return (
     <main
-      className="flex min-h-screen items-center justify-center bg-cover bg-center bg-no-repeat p-4 font-[Montserrat,sans-serif] text-[#03045e]"
+      className="flex min-h-screen items-center justify-center bg-cover bg-center bg-no-repeat p-4 font-[Montserrat,sans-serif] text-[#1e6ae0]"
       style={{
         backgroundImage:
-          "linear-gradient(rgba(3, 4, 94, 0.36), rgba(3, 4, 94, 0.36)), url('/graduation-background.jpg')",
+          "linear-gradient(rgba(30, 106, 224, 0.36), rgba(30, 106, 224, 0.36)), url('/graduation-background.jpg')",
       }}
     >
-      <section className="relative min-h-135 w-full max-w- overflow-hidden rounded-2xl border border-[#d1e8f0] bg-[#03045e] shadow-[0_24px_70px_rgba(3,4,94,0.28)] sm:min-h-140">
+      <section className="relative min-h-135 w-full max-w- overflow-hidden rounded-2xl border border-[#d1e8f0] bg-[#1e6ae0] shadow-[0_24px_70px_rgba(30,106,224,0.28)] sm:min-h-140">
         <div
           aria-hidden={!isSignUp}
           inert={!isSignUp}
@@ -157,10 +157,10 @@ export default function AuthPage({ initialMode }: { initialMode: "login" | "regi
             style={authPanelStyle}
           >
             <LebidBrand />
-            <h1 className="mb-2 text-[26px] font-bold text-white drop-shadow-[0_1px_3px_rgba(3,4,94,0.95)] sm:text-[28px]">
+            <h1 className="mb-2 text-[26px] font-bold text-white drop-shadow-[0_1px_3px_rgba(30,106,224,0.95)] sm:text-[28px]">
               Create Account
             </h1>
-            <p className="mb-3 text-[13px] text-white drop-shadow-[0_1px_3px_rgba(3,4,94,0.95)]">
+            <p className="mb-3 text-[13px] text-white drop-shadow-[0_1px_3px_rgba(30,106,224,0.95)]">
               Use your email to get started
             </p>
 
@@ -257,10 +257,10 @@ export default function AuthPage({ initialMode }: { initialMode: "login" | "regi
             style={authPanelStyle}
           >
             <LebidBrand />
-            <h1 className="mb-2 text-[26px] font-bold text-white drop-shadow-[0_1px_3px_rgba(3,4,94,0.95)] sm:text-[28px]">
+            <h1 className="mb-2 text-[26px] font-bold text-white drop-shadow-[0_1px_3px_rgba(30,106,224,0.95)] sm:text-[28px]">
               Sign in
             </h1>
-            <p className="mb-3 text-[13px] text-white drop-shadow-[0_1px_3px_rgba(3,4,94,0.95)]">
+            <p className="mb-3 text-[13px] text-white drop-shadow-[0_1px_3px_rgba(30,106,224,0.95)]">
               Use your account to continue
             </p>
 
@@ -328,7 +328,7 @@ export default function AuthPage({ initialMode }: { initialMode: "login" | "regi
           }`}
         >
           <div
-            className={`relative -left-full h-full w-[200%] bg-linear-to-br from-[#03045e] via-[#023eba] to-[#0077b6] text-white transition-transform duration-600 ease-in-out ${
+            className={`relative -left-full h-full w-[200%] bg-linear-to-br from-[#1e6ae0] via-[#023eba] to-[#0077b6] text-white transition-transform duration-600 ease-in-out ${
               isSignUp ? "translate-x-1/2" : "translate-x-0"
             }`}
           >

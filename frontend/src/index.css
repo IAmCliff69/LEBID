@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
+@plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -75,15 +76,15 @@
 :root {
   /* Main */
   --background: #f4fbff;
-  --foreground: #03045e;
+  --foreground: #1e6ae0;
 
   /* Cards */
   --card: #ffffff;
-  --card-foreground: #03045e;
+  --card-foreground: #1e6ae0;
 
   /* Popovers */
   --popover: #ffffff;
-  --popover-foreground: #03045e;
+  --popover-foreground: #1e6ae0;
 
   /* Royal blue */
   --primary: #023eba;
@@ -91,7 +92,7 @@
 
   /* Pale cyan surfaces */
   --secondary: #caf0f8;
-  --secondary-foreground: #03045e;
+  --secondary-foreground: #1e6ae0;
 
   /* Muted */
   --muted: #eaf6fa;
@@ -117,11 +118,11 @@
   --chart-5: #caf0f8;
 
   /* Sidebar */
-  --sidebar: #03045e;
+  --sidebar: #1e6ae0;
   --sidebar-foreground: #caf0f8;
 
   --sidebar-primary: #fbb02d;
-  --sidebar-primary-foreground: #03045e;
+  --sidebar-primary-foreground: #1e6ae0;
 
   --sidebar-accent: #023eba;
   --sidebar-accent-foreground: #caf0f8;
@@ -139,28 +140,28 @@
 
 .dark {
   /* Main */
-  --background: #03045e;
+  --background: #1e6ae0;
   --foreground: #caf0f8;
 
   /* Cards */
-  --card: #02306f;
+  --card: #1e6ae0;
   --card-foreground: #caf0f8;
 
   /* Popovers */
-  --popover: #02306f;
+  --popover: #1e6ae0;
   --popover-foreground: #caf0f8;
 
   /* Cyan primary on navy */
   --primary: #00b4d8;
-  --primary-foreground: #03045e;
+  --primary-foreground: #1e6ae0;
 
   /* Secondary */
   --secondary: #023eba;
   --secondary-foreground: #caf0f8;
 
   /* Muted */
-  --muted: #02306f;
-  --muted-foreground: #b7deeb;
+  --muted: #1e6ae0;
+  --muted-foreground: #caf0f8;
 
   /* Accent */
   --accent: #0077b6;
@@ -182,17 +183,26 @@
   --chart-5: #023eba;
 
   /* Sidebar */
-  --sidebar: #03045e;
+  --sidebar: #1e6ae0;
   --sidebar-foreground: #caf0f8;
 
   --sidebar-primary: #fbb02d;
-  --sidebar-primary-foreground: #03045e;
+  --sidebar-primary-foreground: #1e6ae0;
 
   --sidebar-accent: #023eba;
   --sidebar-accent-foreground: #caf0f8;
 
   --sidebar-border: rgb(202 240 248 / 18%);
   --sidebar-ring: #fbb02d;
+}
+
+.dark .calendar-theme-preserved {
+  --card: #1e6ae0;
+  --card-foreground: #caf0f8;
+  --popover: #1e6ae0;
+  --popover-foreground: #caf0f8;
+  --muted: #1e6ae0;
+  --muted-foreground: #b7deeb;
 }
 
 /* =========================================================
@@ -222,4 +232,250 @@
   select {
     font: inherit;
   }
+}
+
+/* =========================================================
+   CUSTOM SCROLLBARS
+   Light blue, auto-hiding
+   ========================================================= */
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 0.3s ease;
+}
+
+*:hover {
+  scrollbar-color: #90e0ef transparent;
+}
+
+/* WebKit (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 999px;
+  transition: background-color 0.3s ease;
+}
+
+/* Show on hover of any scrollable container */
+*:hover::-webkit-scrollbar-thumb {
+  background-color: #90e0ef;
+}
+
+/* Keep visible while actively scrolling */
+*::-webkit-scrollbar-thumb:active {
+  background-color: #00b4d8;
+}
+
+/* Keep legacy page colors legible without changing their light-mode styling. */
+.dark .theme-aware-surface[class~="bg-[#f4fbff]"] {
+  background-color: var(--background);
+}
+
+.dark .planner-theme-root[class~="bg-[#f4fbff]"] {
+  background-color: var(--background);
+}
+
+.dark .theme-aware-surface [class~="bg-white"],
+.dark .theme-aware-surface [class~="bg-white/65"],
+.dark .theme-aware-surface [class~="bg-white/70"] {
+  background-color: var(--card);
+}
+
+.dark .theme-aware-surface [class~="bg-slate-50"],
+.dark .theme-aware-surface [class~="bg-slate-100"],
+.dark .theme-aware-surface [class~="bg-[#f4fbff]"] {
+  background-color: var(--muted);
+}
+
+.dark .theme-aware-surface [class~="bg-slate-200"] {
+  background-color: var(--border);
+}
+
+.dark .theme-aware-surface [class~="bg-amber-50"],
+.dark .theme-aware-surface [class~="bg-amber-50/60"],
+.dark .theme-aware-surface [class~="bg-amber-100"] {
+  background-color: #422006;
+}
+
+.dark .theme-aware-surface [class~="bg-green-100"] {
+  background-color: #123524;
+}
+
+.dark .theme-aware-surface [class~="bg-blue-100"] {
+  background-color: #172f4d;
+}
+
+.dark .theme-aware-surface [class~="bg-red-50"],
+.dark .theme-aware-surface [class~="bg-red-50/60"],
+.dark .theme-aware-surface [class~="bg-red-100"] {
+  background-color: #451a1a;
+}
+
+.dark .theme-aware-surface [class~="border-slate-100"],
+.dark .theme-aware-surface [class~="border-slate-200"],
+.dark .theme-aware-surface [class~="border-slate-300"] {
+  border-color: var(--border);
+}
+
+.dark .theme-aware-surface [class~="border-amber-100"],
+.dark .theme-aware-surface [class~="border-amber-200"] {
+  border-color: #854d0e;
+}
+
+.dark .theme-aware-surface [class~="border-red-100"] {
+  border-color: #7f1d1d;
+}
+
+.dark .theme-aware-surface [class~="border-red-200"] {
+  border-color: #7f1d1d;
+}
+
+.dark .theme-aware-surface [class~="text-slate-900"],
+.dark .theme-aware-surface [class~="text-slate-800"],
+.dark .theme-aware-surface [class~="text-slate-700"],
+.dark .theme-aware-surface [class~="text-slate-600"] {
+  color: var(--foreground);
+}
+
+.dark .theme-aware-surface [class~="text-slate-500"],
+.dark .theme-aware-surface [class~="text-slate-400"],
+.dark .theme-aware-surface [class~="text-slate-300"] {
+  color: var(--muted-foreground);
+}
+
+.dark .theme-aware-surface [class~="text-[#023EBA]"] {
+  color: var(--primary);
+}
+
+.dark .theme-aware-surface [class~="text-amber-700"],
+.dark .theme-aware-surface [class~="text-amber-800"] {
+  color: #fcd34d;
+}
+
+.dark .theme-aware-surface [class~="text-green-700"] {
+  color: #86efac;
+}
+
+.dark .theme-aware-surface [class~="text-blue-700"] {
+  color: #93c5fd;
+}
+
+.dark .theme-aware-surface [class~="text-red-600"],
+.dark .theme-aware-surface [class~="text-red-700"] {
+  color: #fca5a5;
+}
+
+.dark .theme-aware-surface .prose,
+.dark .theme-aware-surface .prose :is(p, li, strong, em, h1, h2, h3, h4) {
+  color: var(--foreground);
+}
+
+.dark .theme-aware-surface :is(button, a):is(:hover, :focus-visible) {
+  outline-color: var(--ring);
+}
+
+.dark .theme-aware-surface select,
+.dark .theme-aware-surface input,
+.dark .theme-aware-surface textarea {
+  color-scheme: dark;
+}
+
+.dark :is([class~="bg-card"], [class~="bg-popover"], [class~="bg-muted"]) {
+  color: var(--card-foreground);
+}
+
+.dark :is([class~="bg-card"], [class~="bg-popover"], [class~="bg-muted"])
+  :is(
+    [class~="text-foreground"],
+    [class~="text-primary"],
+    [class~="text-muted-foreground"],
+    [class~="text-secondary-foreground"]
+  ) {
+  color: var(--card-foreground);
+}
+
+.dark .theme-aware-surface
+  :is(
+    [class~="bg-white"],
+    [class~="bg-white/65"],
+    [class~="bg-white/70"],
+    [class~="bg-slate-50"],
+    [class~="bg-slate-100"],
+    [class~="bg-[#f4fbff]"]
+  ) {
+  color: var(--card-foreground);
+}
+
+.dark .theme-aware-surface
+  :is(
+    [class~="bg-white"],
+    [class~="bg-white/65"],
+    [class~="bg-white/70"],
+    [class~="bg-slate-50"],
+    [class~="bg-slate-100"],
+    [class~="bg-[#f4fbff]"]
+  )
+  :is(
+    [class~="text-slate-900"],
+    [class~="text-slate-800"],
+    [class~="text-slate-700"],
+    [class~="text-slate-600"],
+    [class~="text-slate-500"],
+    [class~="text-slate-400"],
+    [class~="text-slate-300"],
+    [class~="text-[#023EBA]"]
+  ),
+.dark .theme-aware-surface
+  :is(
+    [class~="bg-white"],
+    [class~="bg-white/65"],
+    [class~="bg-white/70"],
+    [class~="bg-slate-50"],
+    [class~="bg-slate-100"],
+    [class~="bg-[#f4fbff]"]
+  ):is(
+    [class~="text-slate-900"],
+    [class~="text-slate-800"],
+    [class~="text-slate-700"],
+    [class~="text-slate-600"],
+    [class~="text-slate-500"],
+    [class~="text-slate-400"],
+    [class~="text-slate-300"],
+    [class~="text-[#023EBA]"]
+  ) {
+  color: var(--card-foreground);
+}
+
+.dark .theme-aware-surface
+  :is(
+    [class~="bg-white"],
+    [class~="bg-white/65"],
+    [class~="bg-white/70"],
+    [class~="bg-slate-50"],
+    [class~="bg-slate-100"],
+    [class~="bg-[#f4fbff]"]
+  )
+  .prose,
+.dark .theme-aware-surface
+  :is(
+    [class~="bg-white"],
+    [class~="bg-white/65"],
+    [class~="bg-white/70"],
+    [class~="bg-slate-50"],
+    [class~="bg-slate-100"],
+    [class~="bg-[#f4fbff]"]
+  )
+  .prose
+  :is(p, li, strong, em, h1, h2, h3, h4) {
+  color: var(--card-foreground);
 }

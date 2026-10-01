@@ -108,16 +108,18 @@ async def upload_timetable(
         valid_entries = []
         for entry in raw_entries:
             try:
-                valid_entries.append(ExtractedEntry(
-                    course_name=entry.get("course_name", "Unknown Course"),
-                    course_code=entry.get("course_code"),
-                    day_of_week=int(entry.get("day_of_week", 0)),
-                    start_time=entry.get("start_time", "00:00"),
-                    end_time=entry.get("end_time", "00:00"),
-                    venue=entry.get("venue"),
-                    lecturer=entry.get("lecturer"),
-                    class_type=entry.get("class_type", "lecture"),
-                ))
+                valid_entries.append(
+                    ExtractedEntry(
+                        course_name=entry.get("course_name", "Unknown Course"),
+                        course_code=entry.get("course_code"),
+                        day_of_week=int(entry.get("day_of_week", 0)),
+                        start_time=entry.get("start_time", "00:00"),
+                        end_time=entry.get("end_time", "00:00"),
+                        venue=entry.get("venue"),
+                        lecturer=entry.get("lecturer"),
+                        class_type=entry.get("class_type", "lecture"),
+                    )
+                )
             except Exception:
                 # Skip malformed entries — the student can add them manually
                 continue
@@ -132,16 +134,56 @@ async def upload_timetable(
                 "Please review them carefully before confirming."
             ),
         )
-
     except Exception as e:
         # Mark the session as failed
         import_session.status = "failed"
         import_session.error_message = str(e)
         db.commit()
 
+        error_str = str(e)
+
+        # Gemini quota / rate-limit (429)
+        if "429" in error_str or "quota" in error_str.lower() or "rate" in error_str.lower():
+            import re as _re
+            retry_match = _re.search(r"retry.*?(\d+)\s*s", error_str, _re.IGNORECASE)
+            retry_hint = (
+                f" Please wait {retry_match.group(1)} seconds and try again."
+                if retry_match
+                else " Please wait a moment and try again."
+            )
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"The AI service is currently busy due to high usage.{retry_hint}",
+            )
+
+        # Gemini returned unreadable output
+        if "could not be parsed as JSON" in error_str or "JSONDecodeError" in error_str:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    "The timetable was received but could not be fully read. "
+                    "Try uploading a clearer image or a PDF version of your timetable."
+                ),
+            )
+
+        # File content not recognised as a timetable
+        if "not a timetable" in error_str.lower() or "could not extract" in error_str.lower():
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    "No timetable data could be found in this file. "
+                    "Make sure the image or PDF contains your class schedule."
+                ),
+            )
+
+        # Generic fallback — no raw error details exposed to the student
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Unable to process the timetable. Please upload a clearer image. Error: {str(e)}",
+            detail=(
+                "Unable to process your timetable. Please try again with a "
+                "clearer image or a PDF. If the problem continues, add your "
+                "classes manually."
+            ),
         )
 
 

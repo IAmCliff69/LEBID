@@ -1,4 +1,5 @@
 import json
+import re
 import base64
 from typing import Any
 
@@ -42,6 +43,30 @@ Important rules:
 """
 
 
+def _clean_response(text: str) -> str:
+    """
+    Cleans the raw text from Gemini before JSON parsing.
+
+    Removes:
+    1. Markdown code fences (```json ... ```)
+    2. Invisible control characters (U+0000–U+001F except tab, newline,
+       carriage return) that break JSON parsing but can appear in
+       Gemini's output when it copies text from images.
+    """
+    text = text.strip()
+
+    # Remove markdown code fences if present
+    if text.startswith("```"):
+        lines = text.split("\n")
+        text = "\n".join(lines[1:-1])
+
+    # Strip control characters that are invalid inside JSON strings.
+    # Keep \t (0x09), \n (0x0A), \r (0x0D) — all others in 0x00–0x1F are illegal.
+    text = re.sub(r"[\x00-\x08\x0B\x0C\x0E-\x1F]", "", text)
+
+    return text.strip()
+
+
 def extract_timetable_from_image(file_bytes: bytes, mime_type: str) -> dict[str, Any]:
     """
     Sends a timetable image to Gemini Vision and extracts structured data.
@@ -75,16 +100,8 @@ def extract_timetable_from_image(file_bytes: bytes, mime_type: str) -> dict[str,
         TIMETABLE_EXTRACTION_PROMPT,
     ])
 
-    # Get the text response
-    response_text = response.text.strip()
+    response_text = _clean_response(response.text)
 
-    # Remove markdown code fences if Gemini wrapped the JSON in them
-    if response_text.startswith("```"):
-        lines = response_text.split("\n")
-        # Remove first line (```json or ```) and last line (```)
-        response_text = "\n".join(lines[1:-1])
-
-    # Parse the JSON
     try:
         extracted = json.loads(response_text)
     except json.JSONDecodeError as e:
@@ -115,11 +132,7 @@ def extract_timetable_from_pdf(file_bytes: bytes) -> dict[str, Any]:
         TIMETABLE_EXTRACTION_PROMPT,
     ])
 
-    response_text = response.text.strip()
-
-    if response_text.startswith("```"):
-        lines = response_text.split("\n")
-        response_text = "\n".join(lines[1:-1])
+    response_text = _clean_response(response.text)
 
     try:
         extracted = json.loads(response_text)

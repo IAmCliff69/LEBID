@@ -649,7 +649,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
             }}
           />
 
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-500 dark:text-muted-foreground">
             Loading your planner...
           </p>
         </div>
@@ -658,12 +658,12 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
   }
 
   return (
-    <div className="-m-5 min-h-full space-y-6 bg-[#f4fbff] p-5 pb-8 sm:-m-6 sm:p-6 sm:pb-8 lg:-m-8 lg:p-8 lg:pb-8">
+    <div className="planner-theme-root -m-5 min-h-full space-y-6 bg-[#f4fbff] p-5 pb-8 sm:-m-6 sm:p-6 sm:pb-8 lg:-m-8 lg:p-8 lg:pb-8">
       {/* =====================================================
           PLANNER HEADER
       ====================================================== */}
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div className="theme-aware-surface flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <div className="flex items-center gap-3">
             <div
@@ -702,7 +702,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
       {/* ERROR */}
 
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="theme-aware-surface rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
         </div>
       )}
@@ -716,7 +716,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
             LEFT PLANNER PANEL
         ================================================== */}
 
-        <aside className="space-y-5">
+        <aside className="theme-aware-surface space-y-5">
           {/* MINI CALENDAR */}
 
           <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -1286,7 +1286,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                         key={day.key}
                         className={`flex min-h-20 items-center justify-center gap-2 rounded-xl px-2 py-2.5 transition ${
                           isSelected
-                            ? "bg-[#CAF0F8] text-[#03045E] shadow-sm"
+                            ? "bg-[#CAF0F8] text-[#1E6AE0] shadow-sm"
                             : "bg-white/65 text-slate-700"
                         }`}
                       >
@@ -1335,7 +1335,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                           aria-pressed={isSelected}
                           className={`mb-1 flex size-7 items-center justify-center rounded-full text-xs font-semibold ${
                             isToday
-                              ? "bg-[#CAF0F8] text-[#03045E] ring-1 ring-[#00B4D8]"
+                              ? "bg-[#CAF0F8] text-[#1E6AE0] ring-1 ring-[#00B4D8]"
                               : isSelected
                                 ? "text-[#023EBA] ring-1 ring-[#023EBA]/25"
                                 : "text-slate-600 hover:bg-slate-100"
@@ -1363,7 +1363,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                               type="button"
                               onClick={(event) => openPopup(event, "study", session)}
                               title={getCourse(session.course_id)?.name || session.topic || "Study Session"}
-                              className="block w-full truncate rounded bg-[#CAF0F8] px-1 py-0.5 text-left text-[8px] font-semibold text-[#03045E] sm:text-[9px]"
+                              className="block w-full truncate rounded bg-[#CAF0F8] px-1 py-0.5 text-left text-[8px] font-semibold text-[#1E6AE0] sm:text-[9px]"
                             >
                               {getCourse(session.course_id)?.name || session.topic || "Study"}
                             </button>
