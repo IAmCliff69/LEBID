@@ -8,14 +8,12 @@ import {
   BarChart2,
   Library,
   BookOpen,
-  LogOut,
   AlertCircle,
   Calendar,
   FileUp,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/context/AuthContext";
 
 const navItems = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
@@ -32,17 +30,10 @@ const navItems = [
 ];
 
 export default function Sidebar() {
-  const { logout } = useAuth();
-
-  const handleLogout = async () => {
-    await logout();
-    window.location.href = "/login";
-  };
-
   return (
-    <aside className="sticky top-0 flex h-screen w-18 shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
+    <aside className="sticky top-0 flex h-screen w-18 shrink-0 flex-col bg-sidebar">
       {/* Brand */}
-      <div className="flex h-14 shrink-0 items-center justify-center border-b border-sidebar-border">
+      <div className="flex h-14 shrink-0 items-center justify-center">
         <div
           className="flex size-9 items-center justify-center rounded-xl bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
           aria-label="Lebid"
@@ -93,18 +84,6 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* Logout */}
-      <div className="shrink-0 border-t border-sidebar-border p-2">
-        <button
-          type="button"
-          onClick={handleLogout}
-          title="Sign out"
-          aria-label="Sign out"
-          className="flex h-9 w-full items-center justify-center rounded-xl text-sidebar-foreground/75 transition hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sidebar-ring"
-        >
-          <LogOut className="size-5" />
-        </button>
-      </div>
     </aside>
   );
 }

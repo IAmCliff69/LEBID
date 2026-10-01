@@ -216,10 +216,10 @@ function EventCard({
 
   const flexBadge =
     event.flexibility === "fixed"
-      ? "bg-slate-100 text-slate-600"
+      ? "bg-muted text-secondary-foreground"
       : event.flexibility === "protected"
-        ? "bg-amber-50 text-amber-700"
-        : "bg-blue-50 text-blue-600";
+        ? "bg-warning/10 text-warning"
+        : "bg-primary/10 text-primary";
 
   return (
     <div
@@ -259,10 +259,10 @@ function EventCard({
               <span
                 className={`text-xs px-2 py-0.5 rounded-full font-medium border shrink-0 ${
                   days === 0
-                    ? "text-red-600 bg-red-50 border-red-200"
+                    ? "text-destructive bg-destructive/10 border-destructive/20"
                     : days <= 3
-                      ? "text-orange-600 bg-orange-50 border-orange-200"
-                      : "text-blue-600 bg-blue-50 border-blue-200"
+                      ? "text-warning bg-warning/10 border-warning/20"
+                      : "text-primary bg-primary/10 border-primary/20"
                 }`}
               >
                 {days === 0 ? "Today" : days === 1 ? "Tomorrow" : `${days}d`}
@@ -302,7 +302,7 @@ function EventCard({
 
             {/* Recurring badge */}
             {event.is_recurring && (
-              <span className="inline-flex text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-purple-50 text-purple-600">
+              <span className="inline-flex text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-secondary/60 text-secondary-foreground">
                 Recurring
               </span>
             )}
@@ -334,7 +334,7 @@ function EventCard({
                 type="button"
                 onClick={onDeleteConfirm}
                 disabled={isDeleting}
-                className="rounded-md bg-destructive px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-destructive/90 disabled:opacity-60"
+                className="rounded-md bg-destructive px-2.5 py-1.5 text-xs font-semibold text-destructive-foreground transition hover:bg-destructive/90 disabled:opacity-60"
               >
                 {isDeleting ? "Deleting…" : "Yes"}
               </button>

@@ -80,15 +80,15 @@ export default function ConflictCheckerPage() {
       {/* Mode tabs */}
       <div
         role="group"
-        className="flex items-center rounded-full border border-slate-200 bg-slate-100 p-1 w-fit"
+        className="flex items-center rounded-full border border-border bg-muted p-1 w-fit"
       >
         <button
           type="button"
           onClick={() => { setMode("slot"); setResult(null); }}
           className={`rounded-full px-4 py-1.5 text-xs font-medium transition ${
             mode === "slot"
-              ? "bg-white text-slate-900 shadow-sm"
-              : "text-slate-500 hover:text-slate-800"
+              ? "bg-card text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
           }`}
         >
           Time slot
@@ -98,8 +98,8 @@ export default function ConflictCheckerPage() {
           onClick={() => { setMode("day"); setResult(null); }}
           className={`rounded-full px-4 py-1.5 text-xs font-medium transition ${
             mode === "day"
-              ? "bg-white text-slate-900 shadow-sm"
-              : "text-slate-500 hover:text-slate-800"
+              ? "bg-card text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
           }`}
         >
           Full day
@@ -192,9 +192,9 @@ export default function ConflictCheckerPage() {
           {result.has_conflicts ? (
             <ConflictWarning conflicts={result.conflicts} />
           ) : (
-            <div className="flex items-center gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3">
-              <CheckCircle className="h-5 w-5 shrink-0 text-green-600" />
-              <p className="text-sm font-medium text-green-800">
+            <div className="flex items-center gap-3 rounded-xl border border-success/20 bg-success/10 px-4 py-3">
+              <CheckCircle className="h-5 w-5 shrink-0 text-success" />
+              <p className="text-sm font-medium text-success">
                 {result.message}
               </p>
             </div>

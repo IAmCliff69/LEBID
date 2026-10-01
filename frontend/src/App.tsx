@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
@@ -49,21 +49,25 @@ function ProtectedLayout({
   );
 }
 
+function AuthLayout() {
+  return (
+    <>
+      <AuthPage initialMode="login" />
+      <Outlet />
+    </>
+  );
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <Routes>
           {/* Public routes */}
-          <Route
-            path="/login"
-            element={<AuthPage initialMode="login" />}
-          />
-
-          <Route
-            path="/register"
-            element={<AuthPage initialMode="register" />}
-          />
+          <Route element={<AuthLayout />}>
+            <Route path="/login" element={<></>} />
+            <Route path="/register" element={<></>} />
+          </Route>
 
           {/* Protected routes */}
           <Route

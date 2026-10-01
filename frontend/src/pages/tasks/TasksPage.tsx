@@ -20,10 +20,10 @@ import { cn } from "@/lib/utils";
 
 // Priority badge colours
 const PRIORITY_STYLES: Record<string, string> = {
-  low: "bg-slate-100 text-slate-600",
-  medium: "bg-blue-50 text-blue-600",
-  high: "bg-orange-50 text-orange-600",
-  urgent: "bg-red-50 text-red-600",
+  low: "bg-muted text-secondary-foreground",
+  medium: "bg-primary/10 text-primary",
+  high: "bg-warning/10 text-warning",
+  urgent: "bg-destructive/10 text-destructive",
 };
 
 // Format a deadline string into a readable date
@@ -271,7 +271,7 @@ function TaskCard({
         className="mt-0.5 shrink-0 text-muted-foreground hover:text-foreground transition-colors"
       >
         {isCompleted ? (
-          <CheckCircle2 className="size-5 text-green-500" />
+          <CheckCircle2 className="size-5 text-success" />
         ) : (
           <Circle className="size-5" />
         )}

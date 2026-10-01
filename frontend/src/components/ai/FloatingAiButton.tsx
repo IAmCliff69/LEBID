@@ -2,7 +2,6 @@ import { useCallback, useRef, useState, type PointerEvent as ReactPointerEvent }
 import { useNavigate, useLocation } from "react-router-dom";
 import { Sparkles, X } from "lucide-react";
 
-const PRIMARY = "#023EBA";
 const BUTTON_SIZE = 52;
 
 export default function FloatingAiButton() {
@@ -10,7 +9,10 @@ export default function FloatingAiButton() {
   const location = useLocation();
   const isAiOpen = location.pathname === "/ai";
 
-  const [pos, setPos] = useState({ right: 24, bottom: 24 });
+  const [pos, setPos] = useState(() => ({
+    right: 24,
+    bottom: Math.max(8, window.innerHeight / 2 - BUTTON_SIZE / 2),
+  }));
 
   const dragging = useRef(false);
   const dragStart = useRef({ pointerX: 0, pointerY: 0, right: 0, bottom: 0 });
@@ -77,10 +79,10 @@ export default function FloatingAiButton() {
         height: BUTTON_SIZE,
         right: pos.right,
         bottom: pos.bottom,
-        backgroundColor: PRIMARY,
+        backgroundColor: "var(--primary)",
         boxShadow: isAiOpen
-          ? "0 8px 28px rgba(2,62,186,0.35)"
-          : "0 8px 28px rgba(2,62,186,0.35), 0 0 0 4px rgba(2,62,186,0.12)",
+          ? "0 8px 28px color-mix(in srgb, var(--primary) 35%, transparent)"
+          : "0 8px 28px color-mix(in srgb, var(--primary) 35%, transparent), 0 0 0 4px color-mix(in srgb, var(--primary) 12%, transparent)",
       }}
     >
       {isAiOpen ? (

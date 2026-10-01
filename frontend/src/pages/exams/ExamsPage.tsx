@@ -246,10 +246,10 @@ function ExamCard({
 
   const urgencyColor =
     days <= 3
-      ? "text-red-600 bg-red-50 border-red-200"
+      ? "text-destructive bg-destructive/10 border-destructive/20"
       : days <= 7
-        ? "text-orange-600 bg-orange-50 border-orange-200"
-        : "text-blue-600 bg-blue-50 border-blue-200";
+        ? "text-warning bg-warning/10 border-warning/20"
+        : "text-primary bg-primary/10 border-primary/20";
 
   return (
     <div

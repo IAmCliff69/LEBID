@@ -21,40 +21,40 @@ const TYPE_CONFIG: Record<
 > = {
   deadline_urgent: {
     label: "Urgent deadline",
-    color: "border-red-200 bg-red-50",
-    dot: "bg-red-500",
+    color: "border-destructive/20 bg-destructive/10",
+    dot: "bg-destructive",
   },
   deadline: {
     label: "Upcoming deadline",
-    color: "border-orange-200 bg-orange-50",
-    dot: "bg-orange-400",
+    color: "border-warning/20 bg-warning/10",
+    dot: "bg-warning",
   },
   exam_urgent: {
     label: "Exam soon",
-    color: "border-red-200 bg-red-50",
-    dot: "bg-red-500",
+    color: "border-destructive/20 bg-destructive/10",
+    dot: "bg-destructive",
   },
   exam_upcoming: {
     label: "Upcoming exam",
-    color: "border-blue-200 bg-blue-50",
-    dot: "bg-blue-500",
+    color: "border-primary/20 bg-primary/10",
+    dot: "bg-primary",
   },
   missed_session: {
     label: "Missed session",
-    color: "border-amber-200 bg-amber-50",
-    dot: "bg-amber-400",
+    color: "border-warning/20 bg-warning/10",
+    dot: "bg-warning",
   },
   overdue_task: {
     label: "Overdue task",
-    color: "border-red-200 bg-red-50",
-    dot: "bg-red-500",
+    color: "border-destructive/20 bg-destructive/10",
+    dot: "bg-destructive",
   },
 };
 
 const DEFAULT_CONFIG = {
   label: "Notification",
-  color: "border-slate-200 bg-slate-50",
-  dot: "bg-slate-400",
+  color: "border-border bg-muted",
+  dot: "bg-muted-foreground",
 };
 
 function getConfig(type: string) {
@@ -196,7 +196,7 @@ export default function NotificationsPage() {
 
       {/* Generate message */}
       {generateMessage && (
-        <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+        <div className="rounded-lg border border-success/20 bg-success/10 px-4 py-3 text-sm text-success">
           {generateMessage}
         </div>
       )}
@@ -212,14 +212,14 @@ export default function NotificationsPage() {
       {!isLoading && notifications.length > 0 && (
         <div className="flex items-center justify-between gap-3">
           {/* Filter tabs */}
-          <div className="flex items-center rounded-full border border-slate-200 bg-slate-100 p-1">
+          <div className="flex items-center rounded-full border border-border bg-muted p-1">
             <button
               type="button"
               onClick={() => handleFilterChange(false)}
               className={`rounded-full px-3.5 py-1 text-xs font-medium transition ${
                 !showUnreadOnly
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "text-slate-500 hover:text-slate-800"
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               All
@@ -229,13 +229,13 @@ export default function NotificationsPage() {
               onClick={() => handleFilterChange(true)}
               className={`flex items-center gap-1.5 rounded-full px-3.5 py-1 text-xs font-medium transition ${
                 showUnreadOnly
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "text-slate-500 hover:text-slate-800"
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               Unread
               {unreadCount > 0 && (
-                <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[#023EBA] px-1 text-[9px] font-bold text-white">
+                <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold text-primary-foreground">
                   {unreadCount}
                 </span>
               )}
@@ -248,7 +248,7 @@ export default function NotificationsPage() {
               <button
                 type="button"
                 onClick={handleMarkAllRead}
-                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100"
+                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-secondary-foreground transition hover:bg-muted"
               >
                 <CheckCheck className="h-3.5 w-3.5" />
                 Mark all read
@@ -257,7 +257,7 @@ export default function NotificationsPage() {
             <button
               type="button"
               onClick={handleClearAll}
-              className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-red-500 transition hover:bg-red-50"
+              className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-destructive transition hover:bg-destructive/10"
             >
               <Trash2 className="h-3.5 w-3.5" />
               Clear all
@@ -305,7 +305,7 @@ export default function NotificationsPage() {
                 <div className="mt-1.5 shrink-0">
                   <span
                     className={`block h-2 w-2 rounded-full transition ${
-                      n.is_read ? "bg-slate-300" : config.dot
+                      n.is_read ? "bg-muted-foreground/50" : config.dot
                     }`}
                   />
                 </div>
@@ -316,7 +316,7 @@ export default function NotificationsPage() {
                     <div className="min-w-0">
                       <p
                         className={`text-sm font-semibold leading-snug ${
-                          n.is_read ? "text-muted-foreground" : "text-slate-900"
+                          n.is_read ? "text-muted-foreground" : "text-foreground"
                         }`}
                       >
                         {n.title}
@@ -331,7 +331,7 @@ export default function NotificationsPage() {
                       <span className="text-[10px] text-muted-foreground">
                         {timeAgo(n.created_at)}
                       </span>
-                      <span className="inline-block rounded-full bg-white/80 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-500 ring-1 ring-slate-200">
+                      <span className="inline-block rounded-full bg-white/80 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-muted-foreground ring-1 ring-slate-200">
                         {config.label}
                       </span>
                     </div>
@@ -343,7 +343,7 @@ export default function NotificationsPage() {
                       <button
                         type="button"
                         onClick={() => handleMarkRead(n)}
-                        className="text-[11px] font-medium text-[#023EBA] transition hover:underline"
+                        className="text-[11px] font-medium text-primary transition hover:underline"
                       >
                         Mark as read
                       </button>
@@ -351,7 +351,7 @@ export default function NotificationsPage() {
                     <button
                       type="button"
                       onClick={() => handleDelete(n.id)}
-                      className="text-[11px] font-medium text-red-500 transition hover:underline"
+                      className="text-[11px] font-medium text-destructive transition hover:underline"
                     >
                       Delete
                     </button>

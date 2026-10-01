@@ -121,14 +121,14 @@ function MarkdownMessage({ content }: { content: string }) {
 
   return (
     <div
-      className="prose prose-sm max-w-none text-slate-800
+      className="prose prose-sm max-w-none text-foreground
         prose-p:my-1 prose-p:leading-relaxed
         prose-ul:my-1 prose-ul:pl-4
         prose-ol:my-1 prose-ol:pl-4
         prose-li:my-0.5
-        prose-strong:font-semibold prose-strong:text-slate-900
+        prose-strong:font-semibold prose-strong:text-foreground
         prose-em:italic
-        prose-headings:font-semibold prose-headings:text-slate-900
+        prose-headings:font-semibold prose-headings:text-foreground
         prose-headings:mt-2 prose-headings:mb-1"
       dangerouslySetInnerHTML={{ __html: html }}
     />
@@ -167,29 +167,29 @@ function RecommendationCard({ rec }: { rec: AiRecommendation }) {
 
   const bgColor =
     rec.type === "add_study_session"
-      ? "bg-[#f4fbff] border-[#CAF0F8]"
+      ? "bg-background border-secondary"
       : rec.type === "reschedule_session"
-        ? "bg-amber-50 border-amber-100"
-        : "bg-slate-50 border-slate-200";
+        ? "bg-warning/10 border-warning/20"
+        : "bg-muted border-border";
 
   const iconColor =
     rec.type === "add_study_session"
-      ? "text-[#023EBA]"
+      ? "text-primary"
       : rec.type === "reschedule_session"
-        ? "text-amber-600"
-        : "text-slate-500";
+        ? "text-warning"
+        : "text-muted-foreground";
 
   return (
     <div className={`rounded-xl border px-4 py-3 text-sm ${bgColor}`}>
       <div className="flex items-start gap-2">
         <BookOpen className={`mt-0.5 h-4 w-4 shrink-0 ${iconColor}`} />
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-slate-800">{rec.title}</p>
-          <p className="mt-1 text-xs leading-relaxed text-slate-600">
+          <p className="font-semibold text-foreground">{rec.title}</p>
+          <p className="mt-1 text-xs leading-relaxed text-secondary-foreground">
             {rec.description}
           </p>
           {state === "done" && (
-            <p className="mt-2 text-xs font-semibold text-green-600">
+            <p className="mt-2 text-xs font-semibold text-success">
               ✓ Study session added to your planner.
             </p>
           )}
@@ -200,13 +200,13 @@ function RecommendationCard({ rec }: { rec: AiRecommendation }) {
             <button
               type="button"
               onClick={handleAccept}
-              className="mt-2 rounded-lg bg-[#023EBA] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#023EBA]/90"
+              className="mt-2 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition hover:bg-primary-hover"
             >
               Add to planner
             </button>
           )}
           {state === "loading" && (
-            <p className="mt-2 text-xs text-slate-400">Adding...</p>
+            <p className="mt-2 text-xs text-muted-foreground">Adding...</p>
           )}
         </div>
       </div>
@@ -368,21 +368,21 @@ export default function AiAssistantPage() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="theme-aware-surface -m-5 flex h-[calc(100vh-3.5rem)] bg-[#f4fbff] sm:-m-6 lg:-m-8">
+    <div className="-m-5 flex h-[calc(100vh-3.5rem)] bg-background sm:-m-6 lg:-m-8">
 
       {/* ── Conversation sidebar ───────────────────────────────────── */}
 
-      <aside className="hidden w-64 shrink-0 flex-col border-r border-slate-200 bg-white lg:flex">
+      <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-card lg:flex">
         {/* Sidebar header */}
-        <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-4 py-4">
+        <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-4">
           <div className="flex items-center gap-2">
             <div
               className="flex h-7 w-7 items-center justify-center rounded-lg"
-              style={{ backgroundColor: "#CAF0F8", color: "#023EBA" }}
+              style={{ backgroundColor: "var(--secondary)", color: "var(--primary)" }}
             >
               <Sparkles className="h-3.5 w-3.5" />
             </div>
-            <span className="text-sm font-semibold text-slate-800">
+            <span className="text-sm font-semibold text-foreground">
               AI Assistant
             </span>
           </div>
@@ -391,7 +391,7 @@ export default function AiAssistantPage() {
             type="button"
             onClick={startNew}
             title="New conversation"
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-[#023EBA]"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-primary"
           >
             <SquarePen className="h-4 w-4" />
           </button>
@@ -401,8 +401,8 @@ export default function AiAssistantPage() {
         <div className="flex-1 overflow-y-auto py-2">
           {conversations.length === 0 ? (
             <div className="flex flex-col items-center px-4 pt-8 text-center">
-              <MessageSquare className="h-8 w-8 text-slate-300" />
-              <p className="mt-2 text-xs text-slate-400">
+              <MessageSquare className="h-8 w-8 text-muted-foreground" />
+              <p className="mt-2 text-xs text-muted-foreground">
                 No conversations yet.
                 <br />
                 Start one below.
@@ -418,25 +418,25 @@ export default function AiAssistantPage() {
                   onClick={() => loadConversation(convo)}
                   className={`group flex w-full items-start gap-2 px-3 py-2.5 text-left transition ${
                     isActive
-                      ? "bg-[#f4fbff]"
-                      : "hover:bg-slate-50"
+                      ? "bg-background"
+                      : "hover:bg-muted"
                   }`}
                 >
                   <MessageSquare
                     className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${
-                      isActive ? "text-[#023EBA]" : "text-slate-400"
+                      isActive ? "text-primary" : "text-muted-foreground"
                     }`}
                   />
 
                   <div className="min-w-0 flex-1">
                     <p
                       className={`truncate text-xs font-medium ${
-                        isActive ? "text-[#023EBA]" : "text-slate-700"
+                        isActive ? "text-primary" : "text-secondary-foreground"
                       }`}
                     >
                       {convo.title}
                     </p>
-                    <p className="mt-0.5 text-[10px] text-slate-400">
+                    <p className="mt-0.5 text-[10px] text-muted-foreground">
                       {formatTime(convo.updatedAt)}
                     </p>
                   </div>
@@ -445,7 +445,7 @@ export default function AiAssistantPage() {
                     type="button"
                     onClick={(e) => deleteConversation(convo.id, e)}
                     title="Delete conversation"
-                    className="ml-auto shrink-0 rounded p-0.5 text-slate-300 opacity-0 transition group-hover:opacity-100 hover:text-red-500"
+                    className="ml-auto shrink-0 rounded p-0.5 text-muted-foreground opacity-0 transition group-hover:opacity-100 hover:text-destructive"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
@@ -461,15 +461,15 @@ export default function AiAssistantPage() {
       <div className="flex min-w-0 flex-1 flex-col">
 
         {/* Chat header */}
-        <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-5 py-4">
+        <div className="flex shrink-0 items-center justify-between border-b border-border bg-card px-5 py-4">
           <div>
-            <h1 className="text-sm font-semibold text-slate-900">
+            <h1 className="text-sm font-semibold text-foreground">
               {activeId
                 ? (conversations.find((c) => c.id === activeId)?.title ??
                     "Conversation")
                 : "New conversation"}
             </h1>
-            <p className="mt-0.5 text-[11px] text-slate-400">
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
               Powered by your academic schedule
             </p>
           </div>
@@ -478,7 +478,7 @@ export default function AiAssistantPage() {
             type="button"
             onClick={startNew}
             title="New conversation"
-            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-500 transition hover:bg-slate-100"
+            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-muted"
           >
             <SquarePen className="h-3.5 w-3.5" />
             New chat
@@ -494,16 +494,16 @@ export default function AiAssistantPage() {
               <div className="flex flex-col items-center pt-8 text-center">
                 <div
                   className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl"
-                  style={{ backgroundColor: "#CAF0F8", color: "#023EBA" }}
+                  style={{ backgroundColor: "var(--secondary)", color: "var(--primary)" }}
                 >
                   <Sparkles className="h-7 w-7" />
                 </div>
 
-                <h2 className="text-lg font-bold text-slate-900">
+                <h2 className="text-lg font-bold text-foreground">
                   How can I help you today?
                 </h2>
 
-                <p className="mt-2 max-w-sm text-sm text-slate-500">
+                <p className="mt-2 max-w-sm text-sm text-muted-foreground">
                   I can see your timetable, assignments, exams, study
                   sessions and events. Ask me anything about your academic
                   schedule.
@@ -515,7 +515,7 @@ export default function AiAssistantPage() {
                       key={s}
                       type="button"
                       onClick={() => send(s)}
-                      className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-600 shadow-sm transition hover:border-[#023EBA]/30 hover:bg-[#f4fbff] hover:text-[#023EBA]"
+                      className="rounded-full border border-border bg-card px-4 py-2 text-xs font-medium text-secondary-foreground shadow-sm transition hover:border-primary/30 hover:bg-background hover:text-primary"
                     >
                       {s}
                     </button>
@@ -538,10 +538,10 @@ export default function AiAssistantPage() {
                 <div
                   className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
                     entry.role === "user"
-                      ? "bg-[#023EBA] text-white"
+                      ? "bg-primary text-primary-foreground"
                       : entry.error
                         ? "border border-destructive/20 bg-destructive/10 text-destructive"
-                        : "border border-slate-200 bg-white text-slate-800 shadow-sm"
+                        : "border border-border bg-card text-foreground shadow-sm"
                   }`}
                 >
                   {entry.role === "user" || entry.error ? (
@@ -563,9 +563,9 @@ export default function AiAssistantPage() {
                       {entry.insights.map((insight, j) => (
                         <div
                           key={j}
-                          className="flex items-start gap-2 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-xs text-amber-800"
+                          className="flex items-start gap-2 rounded-xl border border-warning/20 bg-warning/10 px-3 py-2 text-xs text-warning"
                         >
-                          <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
+                          <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
                           {insight}
                         </div>
                       ))}
@@ -574,7 +574,7 @@ export default function AiAssistantPage() {
 
                   {entry.recommendations && entry.recommendations.length > 0 && (
                     <div className="w-full space-y-2">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                         Recommendations
                       </p>
                       {entry.recommendations.map((rec, j) => (
@@ -589,12 +589,12 @@ export default function AiAssistantPage() {
             {/* Loading dots */}
             {isLoading && (
               <div className="flex justify-start">
-                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+                <div className="rounded-2xl border border-border bg-card px-4 py-3 shadow-sm">
                   <div className="flex items-center gap-1.5">
                     {[0, 150, 300].map((delay) => (
                       <span
                         key={delay}
-                        className="h-2 w-2 animate-bounce rounded-full bg-[#023EBA]"
+                        className="h-2 w-2 animate-bounce rounded-full bg-primary"
                         style={{ animationDelay: `${delay}ms` }}
                       />
                     ))}
@@ -608,9 +608,9 @@ export default function AiAssistantPage() {
         </div>
 
         {/* Input bar */}
-        <div className="shrink-0 border-t border-slate-200 bg-white px-4 py-4 sm:px-6">
+        <div className="shrink-0 border-t border-border bg-card px-4 py-4 sm:px-6">
           <div className="mx-auto max-w-2xl">
-            <div className="flex items-end gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 focus-within:border-[#023EBA]/40 focus-within:bg-white transition">
+            <div className="flex items-end gap-3 rounded-2xl border border-border bg-muted px-4 py-3 transition focus-within:border-primary/40 focus-within:bg-card">
               <textarea
                 ref={textareaRef}
                 value={input}
@@ -618,7 +618,7 @@ export default function AiAssistantPage() {
                 onKeyDown={handleKeyDown}
                 placeholder="Ask about your schedule, workload, or anything academic..."
                 rows={1}
-                className="flex-1 resize-none bg-transparent text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none"
+                className="flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
                 style={{ maxHeight: "140px" }}
                 disabled={isLoading}
               />
@@ -628,13 +628,13 @@ export default function AiAssistantPage() {
                 onClick={() => send(input)}
                 disabled={!input.trim() || isLoading}
                 className="shrink-0"
-                style={{ backgroundColor: "#023EBA" }}
+                style={{ backgroundColor: "var(--primary)" }}
               >
                 <Send className="h-4 w-4" />
                 <span className="sr-only">Send</span>
               </Button>
             </div>
-            <p className="mt-2 text-center text-[10px] text-slate-400">
+            <p className="mt-2 text-center text-[10px] text-muted-foreground">
               Press Enter to send · Shift+Enter for a new line
             </p>
           </div>

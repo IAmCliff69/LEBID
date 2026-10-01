@@ -73,8 +73,14 @@ interface WorkloadOverview {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const PRIMARY = "#023EBA";
-const PALETTE = ["#023EBA", "#0077B6", "#0096C7", "#00B4D8", "#48CAE4", "#90E0EF"];
+const PRIMARY = "var(--primary)";
+const PALETTE = [
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+];
 
 const PERIOD_LABELS: Record<Period, string> = {
   this_week: "This week",
@@ -104,16 +110,16 @@ function StatCard({
     <div
       className={`rounded-xl border px-4 py-4 ${
         warn
-          ? "border-red-200 bg-red-50"
+          ? "border-destructive/20 bg-destructive/10"
           : accent
-            ? "border-[#CAF0F8] bg-[#f4fbff]"
+            ? "border-secondary bg-background"
             : "border-border bg-card"
       }`}
     >
       <p className="text-xs font-medium text-muted-foreground">{label}</p>
       <p
         className={`mt-1 text-2xl font-bold ${
-          warn ? "text-red-600" : accent ? "text-[#023EBA]" : "text-slate-900"
+          warn ? "text-destructive" : accent ? "text-primary" : "text-foreground"
         }`}
       >
         {value}
@@ -134,8 +140,8 @@ function SectionHeading({
 }) {
   return (
     <div className="flex items-center gap-2">
-      <Icon className="h-4 w-4 text-[#023EBA]" />
-      <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+      <Icon className="h-4 w-4 text-primary" />
+      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
     </div>
   );
 }
@@ -190,7 +196,7 @@ export default function AnalyticsPage() {
         {
           name: "Planned",
           hours: studyHours.planned_hours,
-          fill: "#CAF0F8",
+          fill: "var(--chart-2)",
         },
         {
           name: "Completed",
@@ -200,7 +206,7 @@ export default function AnalyticsPage() {
         {
           name: "Skipped",
           hours: studyHours.skipped_hours,
-          fill: "#FDA4AF",
+          fill: "var(--destructive)",
         },
       ]
     : [];
@@ -222,7 +228,7 @@ export default function AnalyticsPage() {
         <div
           role="group"
           aria-label="Select period"
-          className="flex items-center rounded-full border border-slate-200 bg-slate-100 p-1 self-start sm:self-auto"
+          className="flex items-center rounded-full border border-border bg-muted p-1 self-start sm:self-auto"
         >
           {PERIODS.map((p) => (
             <button
@@ -231,8 +237,8 @@ export default function AnalyticsPage() {
               onClick={() => setPeriod(p)}
               className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition ${
                 period === p
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "text-slate-500 hover:text-slate-800"
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {PERIOD_LABELS[p]}
@@ -252,7 +258,7 @@ export default function AnalyticsPage() {
       {loading && (
         <div className="flex items-center justify-center py-16">
           <div
-            className="h-7 w-7 animate-spin rounded-full border-2 border-slate-200"
+            className="h-7 w-7 animate-spin rounded-full border-2 border-border"
             style={{ borderTopColor: PRIMARY }}
           />
         </div>
@@ -311,16 +317,16 @@ export default function AnalyticsPage() {
                     <CartesianGrid
                       strokeDasharray="3 3"
                       vertical={false}
-                      stroke="#f1f5f9"
+                      stroke="var(--border)"
                     />
                     <XAxis
                       dataKey="name"
-                      tick={{ fontSize: 11, fill: "#94a3b8" }}
+                      tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
                       axisLine={false}
                       tickLine={false}
                     />
                     <YAxis
-                      tick={{ fontSize: 11, fill: "#94a3b8" }}
+                      tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
                       axisLine={false}
                       tickLine={false}
                     />
@@ -328,7 +334,9 @@ export default function AnalyticsPage() {
                       formatter={(value) => [`${value ?? 0}h`, "Hours"]}
                       contentStyle={{
                         borderRadius: "10px",
-                        border: "1px solid #e2e8f0",
+                        border: "1px solid var(--border)",
+                        backgroundColor: "var(--popover)",
+                        color: "var(--popover-foreground)",
                         fontSize: "12px",
                       }}
                     />
@@ -384,7 +392,9 @@ export default function AnalyticsPage() {
                         formatter={(value) => [`${value ?? 0}h`, "Hours"]}
                         contentStyle={{
                           borderRadius: "10px",
-                          border: "1px solid #e2e8f0",
+                          border: "1px solid var(--border)",
+                          backgroundColor: "var(--popover)",
+                          color: "var(--popover-foreground)",
                           fontSize: "12px",
                         }}
                       />
@@ -403,7 +413,7 @@ export default function AnalyticsPage() {
                         }}
                       />
                       <div className="flex-1 min-w-0">
-                        <p className="truncate text-xs font-medium text-slate-800">
+                        <p className="truncate text-xs font-medium text-foreground">
                           {c.course_code
                             ? `${c.course_code} — ${c.course_name}`
                             : c.course_name}
@@ -454,11 +464,11 @@ export default function AnalyticsPage() {
                   <p className="text-xs text-muted-foreground">
                     Completion rate
                   </p>
-                  <p className="text-xs font-semibold text-slate-800">
+                  <p className="text-xs font-semibold text-foreground">
                     {tasks.completion_rate_percent}%
                   </p>
                 </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                   <div
                     className="h-full rounded-full transition-all"
                     style={{
@@ -503,11 +513,11 @@ export default function AnalyticsPage() {
                   <p className="text-xs text-muted-foreground">
                     Completion rate
                   </p>
-                  <p className="text-xs font-semibold text-slate-800">
+                  <p className="text-xs font-semibold text-foreground">
                     {assignments.completion_rate_percent}%
                   </p>
                 </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                   <div
                     className="h-full rounded-full transition-all"
                     style={{
@@ -567,9 +577,9 @@ export default function AnalyticsPage() {
             </div>
 
             {workload && workload.overdue_assignments > 0 && (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 flex items-start gap-3">
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
-                <p className="text-sm text-red-700">
+              <div className="rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 flex items-start gap-3">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+                <p className="text-sm text-destructive">
                   You have{" "}
                   <span className="font-bold">
                     {workload.overdue_assignments}

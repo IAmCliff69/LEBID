@@ -39,14 +39,19 @@ function formatTime(time: string): string {
 }
 
 function hexToRgba(hex: string, alpha: number): string {
-  if (!hex || !hex.startsWith("#")) {
-    return `rgba(127, 29, 29, ${alpha})`;
+  const fallback = `color-mix(in srgb, var(--muted-foreground) ${alpha * 100}%, transparent)`;
+  if (hex.startsWith("var(")) {
+    return `color-mix(in srgb, ${hex} ${alpha * 100}%, transparent)`;
+  }
+
+  if (!hex.startsWith("#")) {
+    return fallback;
   }
 
   const cleanHex = hex.replace("#", "");
 
   if (cleanHex.length !== 6) {
-    return `rgba(127, 29, 29, ${alpha})`;
+    return fallback;
   }
 
   const r = parseInt(cleanHex.slice(0, 2), 16);
@@ -162,7 +167,7 @@ export default function WeeklyTimetableGrid({
       return entry.course_color;
     }
 
-    return "#7f1d1d";
+    return "var(--primary)";
   }
 
   function getCourseName(entry: TimetableEntry): string {

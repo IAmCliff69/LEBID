@@ -23,6 +23,7 @@
   /* Brand */
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
 
   /* Supporting */
   --color-secondary: var(--secondary);
@@ -34,7 +35,13 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
 
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
 
   /* UI */
   --color-border: var(--border);
@@ -70,139 +77,142 @@
 
 /* =========================================================
   LIGHT MODE
-  OCEAN ROYALE
+  TERRACOTTA & BEIGE
   ========================================================= */
 
 :root {
   /* Main */
-  --background: #f4fbff;
-  --foreground: #1e6ae0;
+  --background: #f4ede4;
+  --foreground: #3d3029;
 
   /* Cards */
   --card: #ffffff;
-  --card-foreground: #1e6ae0;
+  --card-foreground: #3d3029;
 
   /* Popovers */
   --popover: #ffffff;
-  --popover-foreground: #1e6ae0;
+  --popover-foreground: #3d3029;
 
-  /* Royal blue */
-  --primary: #023eba;
+  /* Terracotta */
+  --primary: #bb5c38;
   --primary-foreground: #ffffff;
+  --primary-hover: #a84e30;
 
-  /* Pale cyan surfaces */
-  --secondary: #caf0f8;
-  --secondary-foreground: #1e6ae0;
+  /* Beige supporting surfaces */
+  --secondary: #e6c9a8;
+  --secondary-foreground: #6b4e3d;
 
   /* Muted */
-  --muted: #eaf6fa;
-  --muted-foreground: #456476;
+  --muted: #efe5da;
+  --muted-foreground: #8b7566;
 
-  /* Cyan highlight */
-  --accent: #caf0f8;
-  --accent-foreground: #023eba;
+  /* Beige highlight */
+  --accent: #e6c9a8;
+  --accent-foreground: #6b4e3d;
 
   /* Danger */
-  --destructive: oklch(0.55 0.22 25);
+  --destructive: #b94a48;
+  --destructive-foreground: #ffffff;
+  --success: #4f7a5a;
+  --success-foreground: #ffffff;
+  --warning: #c88732;
+  --warning-foreground: #3d3029;
 
   /* Borders */
-  --border: #d1e8f0;
-  --input: #c4e0e9;
-  --ring: #00b4d8;
+  --border: transparent;
+  --input: #d6c4b3;
+  --ring: #d98d5c;
 
   /* Charts */
-  --chart-1: #023eba;
-  --chart-2: #00b4d8;
-  --chart-3: #fbb02d;
-  --chart-4: #0077b6;
-  --chart-5: #caf0f8;
+  --chart-1: #bb5c38;
+  --chart-2: #d98d5c;
+  --chart-3: #6b4e3d;
+  --chart-4: #e6c9a8;
+  --chart-5: #8fa58c;
 
   /* Sidebar */
-  --sidebar: #1e6ae0;
-  --sidebar-foreground: #caf0f8;
+  --sidebar: var(--background);
+  --sidebar-foreground: var(--foreground);
 
-  --sidebar-primary: #fbb02d;
-  --sidebar-primary-foreground: #1e6ae0;
+  --sidebar-primary: #bb5c38;
+  --sidebar-primary-foreground: #ffffff;
 
-  --sidebar-accent: #023eba;
-  --sidebar-accent-foreground: #caf0f8;
+  --sidebar-accent: var(--muted);
+  --sidebar-accent-foreground: var(--foreground);
 
-  --sidebar-border: rgb(202 240 248 / 18%);
-  --sidebar-ring: #00b4d8;
+  --sidebar-border: transparent;
+  --sidebar-ring: #d98d5c;
 
   --radius: 0.75rem;
 }
 
 /* =========================================================
   DARK MODE
-  OCEAN ROYALE
+  TERRACOTTA & BEIGE
   ========================================================= */
 
 .dark {
   /* Main */
-  --background: #1e6ae0;
-  --foreground: #caf0f8;
+  --background: #241a16;
+  --foreground: #f4ede4;
 
   /* Cards */
-  --card: #1e6ae0;
-  --card-foreground: #caf0f8;
+  --card: #30231d;
+  --card-foreground: #f4ede4;
 
   /* Popovers */
-  --popover: #1e6ae0;
-  --popover-foreground: #caf0f8;
+  --popover: #3b2b23;
+  --popover-foreground: #f4ede4;
 
-  /* Cyan primary on navy */
-  --primary: #00b4d8;
-  --primary-foreground: #1e6ae0;
+  /* Soft terracotta primary on espresso */
+  --primary: #d98d5c;
+  --primary-foreground: #241a16;
+  --primary-hover: #bb5c38;
 
   /* Secondary */
-  --secondary: #023eba;
-  --secondary-foreground: #caf0f8;
+  --secondary: #4a362b;
+  --secondary-foreground: #f4ede4;
 
   /* Muted */
-  --muted: #1e6ae0;
-  --muted-foreground: #caf0f8;
+  --muted: #3b2b23;
+  --muted-foreground: #b9a394;
 
   /* Accent */
-  --accent: #0077b6;
-  --accent-foreground: #ffffff;
+  --accent: #6b4e3d;
+  --accent-foreground: #f4ede4;
 
   /* Danger */
-  --destructive: oklch(0.65 0.20 25);
+  --destructive: #e06b67;
+  --destructive-foreground: #241a16;
+  --success: #6faf7a;
+  --success-foreground: #241a16;
+  --warning: #e0a34a;
+  --warning-foreground: #241a16;
 
   /* Borders */
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 12%);
-  --ring: #fbb02d;
+  --border: transparent;
+  --input: #514036;
+  --ring: #d98d5c;
 
   /* Charts */
-  --chart-1: #00b4d8;
-  --chart-2: #fbb02d;
-  --chart-3: #caf0f8;
-  --chart-4: #0077b6;
-  --chart-5: #023eba;
+  --chart-1: #d98d5c;
+  --chart-2: #e6c9a8;
+  --chart-3: #b9a394;
+  --chart-4: #8fa58c;
+  --chart-5: #bb5c38;
 
   /* Sidebar */
-  --sidebar: #1e6ae0;
-  --sidebar-foreground: #caf0f8;
+  --sidebar: var(--background);
+  --sidebar-foreground: var(--foreground);
 
-  --sidebar-primary: #fbb02d;
-  --sidebar-primary-foreground: #1e6ae0;
+  --sidebar-primary: #bb5c38;
+  --sidebar-primary-foreground: #ffffff;
 
-  --sidebar-accent: #023eba;
-  --sidebar-accent-foreground: #caf0f8;
+  --sidebar-accent: var(--muted);
+  --sidebar-accent-foreground: var(--foreground);
 
-  --sidebar-border: rgb(202 240 248 / 18%);
-  --sidebar-ring: #fbb02d;
-}
-
-.dark .calendar-theme-preserved {
-  --card: #1e6ae0;
-  --card-foreground: #caf0f8;
-  --popover: #1e6ae0;
-  --popover-foreground: #caf0f8;
-  --muted: #1e6ae0;
-  --muted-foreground: #b7deeb;
+  --sidebar-border: transparent;
+  --sidebar-ring: #d98d5c;
 }
 
 /* =========================================================
@@ -243,11 +253,10 @@
 * {
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
-  transition: scrollbar-color 0.3s ease;
 }
 
 *:hover {
-  scrollbar-color: #90e0ef transparent;
+  scrollbar-color: var(--ring) transparent;
 }
 
 /* WebKit (Chrome, Safari, Edge) */
@@ -268,214 +277,10 @@
 
 /* Show on hover of any scrollable container */
 *:hover::-webkit-scrollbar-thumb {
-  background-color: #90e0ef;
+  background-color: var(--ring);
 }
 
 /* Keep visible while actively scrolling */
 *::-webkit-scrollbar-thumb:active {
-  background-color: #00b4d8;
-}
-
-/* Keep legacy page colors legible without changing their light-mode styling. */
-.dark .theme-aware-surface[class~="bg-[#f4fbff]"] {
-  background-color: var(--background);
-}
-
-.dark .planner-theme-root[class~="bg-[#f4fbff]"] {
-  background-color: var(--background);
-}
-
-.dark .theme-aware-surface [class~="bg-white"],
-.dark .theme-aware-surface [class~="bg-white/65"],
-.dark .theme-aware-surface [class~="bg-white/70"] {
-  background-color: var(--card);
-}
-
-.dark .theme-aware-surface [class~="bg-slate-50"],
-.dark .theme-aware-surface [class~="bg-slate-100"],
-.dark .theme-aware-surface [class~="bg-[#f4fbff]"] {
-  background-color: var(--muted);
-}
-
-.dark .theme-aware-surface [class~="bg-slate-200"] {
-  background-color: var(--border);
-}
-
-.dark .theme-aware-surface [class~="bg-amber-50"],
-.dark .theme-aware-surface [class~="bg-amber-50/60"],
-.dark .theme-aware-surface [class~="bg-amber-100"] {
-  background-color: #422006;
-}
-
-.dark .theme-aware-surface [class~="bg-green-100"] {
-  background-color: #123524;
-}
-
-.dark .theme-aware-surface [class~="bg-blue-100"] {
-  background-color: #172f4d;
-}
-
-.dark .theme-aware-surface [class~="bg-red-50"],
-.dark .theme-aware-surface [class~="bg-red-50/60"],
-.dark .theme-aware-surface [class~="bg-red-100"] {
-  background-color: #451a1a;
-}
-
-.dark .theme-aware-surface [class~="border-slate-100"],
-.dark .theme-aware-surface [class~="border-slate-200"],
-.dark .theme-aware-surface [class~="border-slate-300"] {
-  border-color: var(--border);
-}
-
-.dark .theme-aware-surface [class~="border-amber-100"],
-.dark .theme-aware-surface [class~="border-amber-200"] {
-  border-color: #854d0e;
-}
-
-.dark .theme-aware-surface [class~="border-red-100"] {
-  border-color: #7f1d1d;
-}
-
-.dark .theme-aware-surface [class~="border-red-200"] {
-  border-color: #7f1d1d;
-}
-
-.dark .theme-aware-surface [class~="text-slate-900"],
-.dark .theme-aware-surface [class~="text-slate-800"],
-.dark .theme-aware-surface [class~="text-slate-700"],
-.dark .theme-aware-surface [class~="text-slate-600"] {
-  color: var(--foreground);
-}
-
-.dark .theme-aware-surface [class~="text-slate-500"],
-.dark .theme-aware-surface [class~="text-slate-400"],
-.dark .theme-aware-surface [class~="text-slate-300"] {
-  color: var(--muted-foreground);
-}
-
-.dark .theme-aware-surface [class~="text-[#023EBA]"] {
-  color: var(--primary);
-}
-
-.dark .theme-aware-surface [class~="text-amber-700"],
-.dark .theme-aware-surface [class~="text-amber-800"] {
-  color: #fcd34d;
-}
-
-.dark .theme-aware-surface [class~="text-green-700"] {
-  color: #86efac;
-}
-
-.dark .theme-aware-surface [class~="text-blue-700"] {
-  color: #93c5fd;
-}
-
-.dark .theme-aware-surface [class~="text-red-600"],
-.dark .theme-aware-surface [class~="text-red-700"] {
-  color: #fca5a5;
-}
-
-.dark .theme-aware-surface .prose,
-.dark .theme-aware-surface .prose :is(p, li, strong, em, h1, h2, h3, h4) {
-  color: var(--foreground);
-}
-
-.dark .theme-aware-surface :is(button, a):is(:hover, :focus-visible) {
-  outline-color: var(--ring);
-}
-
-.dark .theme-aware-surface select,
-.dark .theme-aware-surface input,
-.dark .theme-aware-surface textarea {
-  color-scheme: dark;
-}
-
-.dark :is([class~="bg-card"], [class~="bg-popover"], [class~="bg-muted"]) {
-  color: var(--card-foreground);
-}
-
-.dark :is([class~="bg-card"], [class~="bg-popover"], [class~="bg-muted"])
-  :is(
-    [class~="text-foreground"],
-    [class~="text-primary"],
-    [class~="text-muted-foreground"],
-    [class~="text-secondary-foreground"]
-  ) {
-  color: var(--card-foreground);
-}
-
-.dark .theme-aware-surface
-  :is(
-    [class~="bg-white"],
-    [class~="bg-white/65"],
-    [class~="bg-white/70"],
-    [class~="bg-slate-50"],
-    [class~="bg-slate-100"],
-    [class~="bg-[#f4fbff]"]
-  ) {
-  color: var(--card-foreground);
-}
-
-.dark .theme-aware-surface
-  :is(
-    [class~="bg-white"],
-    [class~="bg-white/65"],
-    [class~="bg-white/70"],
-    [class~="bg-slate-50"],
-    [class~="bg-slate-100"],
-    [class~="bg-[#f4fbff]"]
-  )
-  :is(
-    [class~="text-slate-900"],
-    [class~="text-slate-800"],
-    [class~="text-slate-700"],
-    [class~="text-slate-600"],
-    [class~="text-slate-500"],
-    [class~="text-slate-400"],
-    [class~="text-slate-300"],
-    [class~="text-[#023EBA]"]
-  ),
-.dark .theme-aware-surface
-  :is(
-    [class~="bg-white"],
-    [class~="bg-white/65"],
-    [class~="bg-white/70"],
-    [class~="bg-slate-50"],
-    [class~="bg-slate-100"],
-    [class~="bg-[#f4fbff]"]
-  ):is(
-    [class~="text-slate-900"],
-    [class~="text-slate-800"],
-    [class~="text-slate-700"],
-    [class~="text-slate-600"],
-    [class~="text-slate-500"],
-    [class~="text-slate-400"],
-    [class~="text-slate-300"],
-    [class~="text-[#023EBA]"]
-  ) {
-  color: var(--card-foreground);
-}
-
-.dark .theme-aware-surface
-  :is(
-    [class~="bg-white"],
-    [class~="bg-white/65"],
-    [class~="bg-white/70"],
-    [class~="bg-slate-50"],
-    [class~="bg-slate-100"],
-    [class~="bg-[#f4fbff]"]
-  )
-  .prose,
-.dark .theme-aware-surface
-  :is(
-    [class~="bg-white"],
-    [class~="bg-white/65"],
-    [class~="bg-white/70"],
-    [class~="bg-slate-50"],
-    [class~="bg-slate-100"],
-    [class~="bg-[#f4fbff]"]
-  )
-  .prose
-  :is(p, li, strong, em, h1, h2, h3, h4) {
-  color: var(--card-foreground);
+  background-color: var(--primary);
 }

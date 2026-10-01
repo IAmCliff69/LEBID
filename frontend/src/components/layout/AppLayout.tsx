@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
+import ThemeToggle from "./ThemeToggle";
 import FloatingAiButton from "@/components/ai/FloatingAiButton";  // ← add
 
 interface AppLayoutProps {
@@ -34,6 +35,7 @@ export default function AppLayout({
 
       {/* Floating AI assistant — available on every protected page */}
       <FloatingAiButton />
+      <ThemeToggle />
     </div>
   );
 }

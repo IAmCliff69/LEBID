@@ -4,6 +4,7 @@ import {
   useRef,
   useState,
   type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
   
 } from "react";
 
@@ -60,8 +61,13 @@ const TIME_SLOTS = Array.from(
 
 const ROW_HEIGHT = 56;
 const TIME_COLUMN_WIDTH = 56;
-const PRIMARY_COLOR = "#023EBA";
-const EVENT_PALETTE = ["#023EBA", "#0077B6", "#0096C7", "#00B4D8"];
+const PRIMARY_COLOR = "var(--primary)";
+const EVENT_PALETTE = [
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+];
 
 type CalendarView = "month" | "week" | "day";
 type PopupPosition = { top: number; left: number; width: number };
@@ -138,14 +144,19 @@ function hexToRgba(
   hex: string | undefined | null,
   alpha: number
 ): string {
+  const fallback = `color-mix(in srgb, var(--muted-foreground) ${alpha * 100}%, transparent)`;
   if (!hex) {
-    return `rgba(128, 128, 128, ${alpha})`;
+    return fallback;
+  }
+
+  if (hex.startsWith("var(")) {
+    return `color-mix(in srgb, ${hex} ${alpha * 100}%, transparent)`;
   }
 
   const cleanHex = hex.replace("#", "");
 
   if (cleanHex.length !== 6) {
-    return `rgba(128, 128, 128, ${alpha})`;
+    return fallback;
   }
 
   const r = parseInt(cleanHex.substring(0, 2), 16);
@@ -231,6 +242,13 @@ export default function StudyPlannerPage() {
   });
 
   const popupRef = useRef<HTMLDivElement | null>(null);
+  const popupDragRef = useRef<{
+    pointerId: number;
+    pointerX: number;
+    pointerY: number;
+    left: number;
+    top: number;
+  } | null>(null);
 
   const [showLectures, setShowLectures] = useState(true);
   const [showStudySessions, setShowStudySessions] =
@@ -465,6 +483,54 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
     }
   };
 
+  const startPopupDrag = (
+    event: ReactPointerEvent<HTMLDivElement>
+  ) => {
+    if ((event.target as HTMLElement).closest("button")) return;
+
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    popupDragRef.current = {
+      pointerId: event.pointerId,
+      pointerX: event.clientX,
+      pointerY: event.clientY,
+      left: popupPosition.left,
+      top: popupPosition.top,
+    };
+  };
+
+  const movePopup = (
+    event: ReactPointerEvent<HTMLDivElement>
+  ) => {
+    const drag = popupDragRef.current;
+    const popup = popupRef.current;
+    if (!drag || !popup || drag.pointerId !== event.pointerId) return;
+
+    const { width, height } = popup.getBoundingClientRect();
+    const maxLeft = Math.max(8, window.innerWidth - width - 8);
+    const maxTop = Math.max(8, window.innerHeight - height - 8);
+
+    setPopupPosition((current) => ({
+      ...current,
+      left: Math.max(
+        8,
+        Math.min(maxLeft, drag.left + event.clientX - drag.pointerX)
+      ),
+      top: Math.max(
+        8,
+        Math.min(maxTop, drag.top + event.clientY - drag.pointerY)
+      ),
+    }));
+  };
+
+  const stopPopupDrag = (
+    event: ReactPointerEvent<HTMLDivElement>
+  ) => {
+    if (popupDragRef.current?.pointerId === event.pointerId) {
+      popupDragRef.current = null;
+    }
+  };
+
   /*
    * ============================================================
    * OUTSIDE CLICK + ESCAPE
@@ -643,13 +709,13 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
       <div className="flex min-h-150 items-center justify-center">
         <div className="flex flex-col items-center">
           <div
-            className="mb-3 h-7 w-7 animate-spin rounded-full border-2 border-slate-200"
+            className="mb-3 h-7 w-7 animate-spin rounded-full border-2 border-border"
             style={{
               borderTopColor: PRIMARY_COLOR,
             }}
           />
 
-          <p className="text-sm text-slate-500 dark:text-muted-foreground">
+          <p className="text-sm text-muted-foreground dark:text-muted-foreground">
             Loading your planner...
           </p>
         </div>
@@ -658,21 +724,18 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
   }
 
   return (
-    <div className="planner-theme-root -m-5 min-h-full space-y-6 bg-[#f4fbff] p-5 pb-8 sm:-m-6 sm:p-6 sm:pb-8 lg:-m-8 lg:p-8 lg:pb-8">
+    <div className="-m-5 min-h-full space-y-6 bg-background p-5 pb-8 sm:-m-6 sm:p-6 sm:pb-8 lg:-m-8 lg:p-8 lg:pb-8">
       {/* =====================================================
           PLANNER HEADER
       ====================================================== */}
 
-      <div className="theme-aware-surface flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <div className="flex items-center gap-3">
             <div
               className="flex h-11 w-11 items-center justify-center rounded-2xl"
               style={{
-                backgroundColor: hexToRgba(
-                  PRIMARY_COLOR,
-                  0.1
-                ),
+                backgroundColor: "color-mix(in srgb, var(--primary) 10%, transparent)",
                 color: PRIMARY_COLOR,
               }}
             >
@@ -680,11 +743,11 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
             </div>
 
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">
                 Study Planner
               </h1>
 
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-sm text-muted-foreground">
                 Plan, view and manage everything happening
                 in your academic week.
               </p>
@@ -702,7 +765,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
       {/* ERROR */}
 
       {error && (
-        <div className="theme-aware-surface rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {error}
         </div>
       )}
@@ -716,17 +779,17 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
             LEFT PLANNER PANEL
         ================================================== */}
 
-        <aside className="theme-aware-surface space-y-5">
+        <aside className="space-y-5">
           {/* MINI CALENDAR */}
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
             <div className="mb-4 flex items-center justify-between">
               <div>
-                <h2 className="text-sm font-semibold text-slate-900">
+                <h2 className="text-sm font-semibold text-foreground">
                   {formatMonthYear(currentWeek)}
                 </h2>
 
-                <p className="mt-0.5 text-[11px] text-slate-400">
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
                   Week overview
                 </p>
               </div>
@@ -735,7 +798,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                 <button
                   type="button"
                   onClick={previousWeek}
-                  className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100"
+                  className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted"
                   aria-label="Previous week"
                 >
                   <ChevronLeft className="h-3.5 w-3.5" />
@@ -744,7 +807,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                 <button
                   type="button"
                   onClick={nextWeek}
-                  className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100"
+                  className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted"
                   aria-label="Next week"
                 >
                   <ChevronRight className="h-3.5 w-3.5" />
@@ -757,7 +820,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                 (day, index) => (
                   <div
                     key={`${day}-${index}`}
-                    className="pb-2 text-center text-[10px] font-semibold uppercase text-slate-400"
+                    className="pb-2 text-center text-[10px] font-semibold uppercase text-muted-foreground"
                   >
                     {day}
                   </div>
@@ -785,10 +848,10 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                     aria-label={formatDate(date)}
                     className={`flex aspect-square items-center justify-center rounded-lg text-[11px] font-medium transition ${
                       isToday
-                        ? "text-white shadow-sm"
+                        ? "text-primary-foreground shadow-sm"
                         : isCurrentMonth
-                          ? "text-slate-700 hover:bg-slate-100"
-                          : "text-slate-300 hover:bg-slate-50"
+                          ? "text-secondary-foreground hover:bg-muted"
+                          : "text-muted-foreground hover:bg-muted"
                     }`}
                     style={
                       isToday
@@ -796,7 +859,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                             backgroundColor: PRIMARY_COLOR,
                           }
                         : isSelectedWeek
-                          ? { backgroundColor: "#CAF0F8" }
+                          ? { backgroundColor: "var(--secondary)" }
                           : undefined
                     }
                   >
@@ -809,13 +872,13 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
 
           {/* WEEK SUMMARY */}
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
             <div className="mb-3">
-              <h2 className="text-sm font-semibold text-slate-900">
+              <h2 className="text-sm font-semibold text-foreground">
                 This Week
               </h2>
 
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs text-muted-foreground">
                 {formatShortDate(currentWeek)} –{" "}
                 {formatShortDate(addDays(currentWeek, 6))}
               </p>
@@ -824,7 +887,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
             <div className="space-y-2">
               <div
                 className="rounded-lg p-3"
-                style={{ backgroundColor: "#CAF0F8" }}
+                style={{ backgroundColor: "var(--secondary)" }}
               >
                 <p
                   className="text-2xl font-bold"
@@ -833,18 +896,18 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                   {totalWeeklyItems}
                 </p>
 
-                <p className="mt-0.5 text-xs text-slate-500">
+                <p className="mt-0.5 text-xs text-muted-foreground">
                   scheduled items
                 </p>
               </div>
 
               {/* Weekly study session count — now from the dedicated endpoint */}
-              <div className="rounded-lg bg-slate-50 p-3">
-                <p className="text-xs font-semibold text-slate-700">
+              <div className="rounded-lg bg-muted p-3">
+                <p className="text-xs font-semibold text-secondary-foreground">
                   Study sessions
                 </p>
 
-                <p className="mt-1 text-[11px] text-slate-500">
+                <p className="mt-1 text-[11px] text-muted-foreground">
                   {weekSessions.length === 0
                     ? "No study sessions this week."
                     : `${weekSessions.length} session${weekSessions.length === 1 ? "" : "s"} planned this week.`}
@@ -855,13 +918,13 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                     {weekSessions.slice(0, 3).map((s) => (
                       <div
                         key={s.id}
-                        className="flex items-center justify-between gap-2 rounded-md bg-white px-2 py-1.5 text-[10px]"
+                        className="flex items-center justify-between gap-2 rounded-md bg-card px-2 py-1.5 text-[10px]"
                       >
-                        <span className="truncate font-medium text-slate-700">
+                        <span className="truncate font-medium text-secondary-foreground">
                           {getCourse(s.course_id)?.code ?? "Study"}
                         </span>
 
-                        <span className="shrink-0 text-slate-400">
+                        <span className="shrink-0 text-muted-foreground">
                           {new Date(
                             `${s.session_date}T00:00:00`
                           ).toLocaleDateString("en-US", {
@@ -874,7 +937,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                     ))}
 
                     {weekSessions.length > 3 && (
-                      <p className="pt-0.5 text-center text-[10px] text-slate-400">
+                      <p className="pt-0.5 text-center text-[10px] text-muted-foreground">
                         +{weekSessions.length - 3} more
                       </p>
                     )}
@@ -886,23 +949,23 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
 
           {/* TODAY'S STUDY SESSIONS */}
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
             <div className="mb-3 flex items-center justify-between">
               <div>
-                <h2 className="text-sm font-semibold text-slate-900">
+                <h2 className="text-sm font-semibold text-foreground">
                   Today
                 </h2>
 
-                <p className="mt-0.5 text-[11px] text-slate-400">
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
                   Study sessions scheduled for today
                 </p>
               </div>
 
-              <BookOpen className="h-4 w-4 text-slate-400" />
+              <BookOpen className="h-4 w-4 text-muted-foreground" />
             </div>
 
             {todaySessions.length === 0 ? (
-              <p className="rounded-lg bg-slate-50 px-3 py-3 text-[11px] text-slate-400">
+              <p className="rounded-lg bg-muted px-3 py-3 text-[11px] text-muted-foreground">
                 No study sessions planned for today.
               </p>
             ) : (
@@ -913,19 +976,19 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                   return (
                     <div
                       key={s.id}
-                      className="rounded-lg border border-slate-100 bg-[#f4fbff] px-3 py-2.5"
+                      className="rounded-lg border border-border bg-background px-3 py-2.5"
                     >
-                      <p className="truncate text-xs font-semibold text-slate-800">
+                      <p className="truncate text-xs font-semibold text-foreground">
                         {course?.name ?? s.topic ?? "Study Session"}
                       </p>
 
                       {s.topic && s.topic !== course?.name && (
-                        <p className="mt-0.5 truncate text-[10px] text-slate-500">
+                        <p className="mt-0.5 truncate text-[10px] text-muted-foreground">
                           {s.topic}
                         </p>
                       )}
 
-                      <div className="mt-1.5 flex items-center gap-2 text-[10px] text-slate-500">
+                      <div className="mt-1.5 flex items-center gap-2 text-[10px] text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
                           {formatTime(s.start_time)} – {formatTime(s.end_time)}
@@ -944,12 +1007,12 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                         <span
                           className={`inline-flex rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${
                             s.status === "completed"
-                              ? "bg-green-100 text-green-700"
+                              ? "bg-success/10 text-success"
                               : s.status === "in_progress"
-                                ? "bg-blue-100 text-blue-700"
+                                ? "bg-primary/10 text-primary"
                                 : s.status === "skipped"
-                                  ? "bg-red-100 text-red-600"
-                                  : "bg-slate-100 text-slate-500"
+                                  ? "bg-destructive/10 text-destructive"
+                                  : "bg-muted text-muted-foreground"
                           }`}
                         >
                           {getStatusLabel(s.status)}
@@ -965,19 +1028,19 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
           {/* MISSED STUDY SESSIONS */}
 
           {missedSessions.length > 0 && (
-            <section className="rounded-2xl border border-red-100 bg-white p-4 shadow-sm">
+            <section className="rounded-2xl border border-destructive/20 bg-card p-4 shadow-sm">
               <div className="mb-3 flex items-center justify-between">
                 <div>
-                  <h2 className="text-sm font-semibold text-slate-900">
+                  <h2 className="text-sm font-semibold text-foreground">
                     Missed Sessions
                   </h2>
 
-                  <p className="mt-0.5 text-[11px] text-slate-400">
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">
                     Past sessions not yet completed
                   </p>
                 </div>
 
-                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold text-destructive-foreground">
                   {missedSessions.length}
                 </span>
               </div>
@@ -989,13 +1052,13 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                   return (
                     <div
                       key={s.id}
-                      className="rounded-lg border border-red-100 bg-red-50/60 px-3 py-2.5"
+                      className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2.5"
                     >
-                      <p className="truncate text-xs font-semibold text-slate-800">
+                      <p className="truncate text-xs font-semibold text-foreground">
                         {course?.name ?? s.topic ?? "Study Session"}
                       </p>
 
-                      <p className="mt-0.5 text-[10px] text-slate-500">
+                      <p className="mt-0.5 text-[10px] text-muted-foreground">
                         {new Date(
                           `${s.session_date}T00:00:00`
                         ).toLocaleDateString("en-US", {
@@ -1008,7 +1071,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                       </p>
 
                       {s.venue && (
-                        <p className="mt-0.5 flex items-center gap-1 truncate text-[10px] text-slate-400">
+                        <p className="mt-0.5 flex items-center gap-1 truncate text-[10px] text-muted-foreground">
                           <MapPin className="h-3 w-3 shrink-0" />
                           {s.venue}
                         </p>
@@ -1018,12 +1081,12 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                 })}
 
                 {missedSessions.length > 4 && (
-                  <p className="text-center text-[10px] text-slate-400">
+                  <p className="text-center text-[10px] text-muted-foreground">
                     +{missedSessions.length - 4} more missed sessions
                   </p>
                 )}
 
-                <p className="pt-1 text-[10px] leading-relaxed text-slate-400">
+                <p className="pt-1 text-[10px] leading-relaxed text-muted-foreground">
                   Click a session on the calendar to reschedule or mark it as skipped.
                 </p>
               </div>
@@ -1032,13 +1095,13 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
 
           {/* OTHER CALENDARS */}
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
             <div className="mb-4">
-              <h2 className="text-sm font-semibold text-slate-900">
+              <h2 className="text-sm font-semibold text-foreground">
                 Other Calendars
               </h2>
 
-              <p className="mt-1 text-[11px] text-slate-400">
+              <p className="mt-1 text-[11px] text-muted-foreground">
                 Choose what appears on your calendar.
               </p>
             </div>
@@ -1051,13 +1114,13 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                 onClick={() =>
                   setShowPersonalEvents((previous) => !previous)
                 }
-                className="flex w-full items-center gap-3 rounded-lg px-1 py-1 text-left transition hover:bg-slate-50"
+                className="flex w-full items-center gap-3 rounded-lg px-1 py-1 text-left transition hover:bg-muted"
               >
                 <span
                   className={`flex h-4 w-4 items-center justify-center rounded border ${
                     showPersonalEvents
                       ? "border-primary"
-                      : "border-slate-300"
+                      : "border-border"
                   }`}
                   style={
                     showPersonalEvents
@@ -1066,7 +1129,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                   }
                 >
                   {showPersonalEvents && (
-                    <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-card" />
                   )}
                 </span>
 
@@ -1075,7 +1138,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                   style={{ backgroundColor: PRIMARY_COLOR }}
                 />
 
-                <span className="text-xs text-slate-700">
+                <span className="text-xs text-secondary-foreground">
                   Personal Events
                 </span>
               </button>
@@ -1087,11 +1150,11 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                 onClick={() =>
                   setShowLectures((previous) => !previous)
                 }
-                className="flex w-full items-center gap-3 rounded-lg px-1 py-1 text-left transition hover:bg-slate-50"
+                className="flex w-full items-center gap-3 rounded-lg px-1 py-1 text-left transition hover:bg-muted"
               >
                 <span
                   className={`flex h-4 w-4 items-center justify-center rounded border ${
-                    showLectures ? "border-primary" : "border-slate-300"
+                    showLectures ? "border-primary" : "border-border"
                   }`}
                   style={
                     showLectures
@@ -1100,13 +1163,13 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                   }
                 >
                   {showLectures && (
-                    <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-card" />
                   )}
                 </span>
 
                 <span className="h-2.5 w-2.5 rounded-full bg-primary" />
 
-                <span className="text-xs text-slate-700">Lectures</span>
+                <span className="text-xs text-secondary-foreground">Lectures</span>
               </button>
 
               {/* STUDY SESSIONS */}
@@ -1116,28 +1179,28 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                 onClick={() =>
                   setShowStudySessions((previous) => !previous)
                 }
-                className="flex w-full items-center gap-3 rounded-lg px-1 py-1 text-left transition hover:bg-slate-50"
+                className="flex w-full items-center gap-3 rounded-lg px-1 py-1 text-left transition hover:bg-muted"
               >
                 <span
                   className={`flex h-4 w-4 items-center justify-center rounded border ${
                     showStudySessions
-                      ? "border-[#00B4D8]"
-                      : "border-slate-300"
+                      ? "border-ring"
+                      : "border-border"
                   }`}
                   style={
                     showStudySessions
-                      ? { backgroundColor: "#00B4D8" }
+                      ? { backgroundColor: "var(--primary)" }
                       : undefined
                   }
                 >
                   {showStudySessions && (
-                    <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-card" />
                   )}
                 </span>
 
-                <span className="h-2.5 w-2.5 rounded-full bg-[#00B4D8]" />
+                <span className="h-2.5 w-2.5 rounded-full bg-primary" />
 
-                <span className="text-xs text-slate-700">
+                <span className="text-xs text-secondary-foreground">
                   Study Sessions
                 </span>
               </button>
@@ -1153,17 +1216,17 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
           {/* CALENDAR TOOLBAR */}
 
           <div
-            className="overflow-hidden rounded-2xl border border-slate-200 shadow-sm"
+            className="overflow-hidden rounded-2xl border border-border shadow-sm"
             style={{
               background:
-                "linear-gradient(115deg, #CAF0F8 0%, #F1FAFC 55%, #DFEAF7 100%)",
+                "linear-gradient(115deg, var(--secondary) 0%, var(--background) 55%, var(--accent) 100%)",
             }}
           >
             <div className="px-4 py-3">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <div className="flex items-center gap-2.5">
-                    <h2 className="text-lg font-semibold tracking-tight text-slate-900">
+                    <h2 className="text-lg font-semibold tracking-tight text-foreground">
                       {calendarView === "day"
                         ? formatDate(selectedDate)
                         : formatMonthYear(
@@ -1174,7 +1237,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                     <button
                       type="button"
                       onClick={goToToday}
-                      className="rounded-full bg-[#CAF0F8] px-2.5 py-1 text-[10px] font-semibold text-[#023EBA] transition hover:bg-[#b4e7f2]"
+                      className="rounded-full bg-secondary px-2.5 py-1 text-[10px] font-semibold text-primary transition hover:bg-secondary"
                     >
                       Today
                     </button>
@@ -1182,7 +1245,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                     <button
                       type="button"
                       onClick={previousWeek}
-                      className="rounded-full p-1 text-slate-500 transition hover:bg-slate-100"
+                      className="rounded-full p-1 text-muted-foreground transition hover:bg-muted"
                       aria-label="Previous week"
                     >
                       <ChevronLeft className="h-4 w-4" />
@@ -1191,7 +1254,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                     <button
                       type="button"
                       onClick={nextWeek}
-                      className="rounded-full p-1 text-slate-500 transition hover:bg-slate-100"
+                      className="rounded-full p-1 text-muted-foreground transition hover:bg-muted"
                       aria-label="Next week"
                     >
                       <ChevronRight className="h-4 w-4" />
@@ -1203,13 +1266,13 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                   <div
                     role="group"
                     aria-label="Calendar view"
-                    className="flex items-center rounded-full border border-slate-200 bg-slate-100 p-1"
+                    className="flex items-center rounded-full border border-border bg-muted p-1"
                   >
                     <button
                       type="button"
                       aria-pressed={calendarView === "month"}
                       onClick={() => setCalendarView("month")}
-                      className={`rounded-full px-3.5 py-1.5 text-xs font-medium ${calendarView === "month" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+                      className={`rounded-full px-3.5 py-1.5 text-xs font-medium ${calendarView === "month" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
                     >
                       Month
                     </button>
@@ -1218,7 +1281,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                       type="button"
                       aria-pressed={calendarView === "week"}
                       onClick={() => setCalendarView("week")}
-                      className={`rounded-full px-3.5 py-1.5 text-xs font-medium ${calendarView === "week" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+                      className={`rounded-full px-3.5 py-1.5 text-xs font-medium ${calendarView === "week" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
                     >
                       Week
                     </button>
@@ -1227,7 +1290,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                       type="button"
                       aria-pressed={calendarView === "day"}
                       onClick={() => setCalendarView("day")}
-                      className={`rounded-full px-3.5 py-1.5 text-xs font-medium ${calendarView === "day" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+                      className={`rounded-full px-3.5 py-1.5 text-xs font-medium ${calendarView === "day" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
                     >
                       Day
                     </button>
@@ -1257,7 +1320,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
 
                   {calendarView !== "month" && (
                     <div className="flex items-end justify-center px-1 py-3">
-                      <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                      <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                         GMT
                       </span>
                     </div>
@@ -1269,7 +1332,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                     DAYS.map((day) => (
                       <div
                         key={day}
-                        className="py-2 text-center text-[10px] font-semibold uppercase text-slate-500"
+                        className="py-2 text-center text-[10px] font-semibold uppercase text-muted-foreground"
                       >
                         {day.slice(0, 3)}
                       </div>
@@ -1286,13 +1349,13 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                         key={day.key}
                         className={`flex min-h-20 items-center justify-center gap-2 rounded-xl px-2 py-2.5 transition ${
                           isSelected
-                            ? "bg-[#CAF0F8] text-[#1E6AE0] shadow-sm"
-                            : "bg-white/65 text-slate-700"
+                            ? "bg-secondary text-primary shadow-sm"
+                            : "bg-card/65 text-secondary-foreground"
                         }`}
                       >
                         <span
                           className={`text-[10px] font-bold uppercase ${
-                            isSelected ? "text-[#023EBA]" : "text-slate-400"
+                            isSelected ? "text-secondary-foreground" : "text-muted-foreground"
                           }`}
                         >
                           {day.name.slice(0, 3)}
@@ -1307,7 +1370,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
               </div>
 
               {calendarView === "month" ? (
-                <div className="mt-3 grid grid-cols-7 gap-px overflow-hidden rounded-2xl border border-slate-200 bg-slate-200 shadow-sm">
+                <div className="mt-3 grid grid-cols-7 gap-px overflow-hidden rounded-2xl border border-border bg-border shadow-sm">
                   {miniCalendarDays.map((date) => {
                     const dateKey = dateToKey(date);
                     const dayNumber = (date.getDay() + 6) % 7;
@@ -1322,7 +1385,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                     return (
                       <div
                         key={dateKey}
-                        className={`min-h-24 bg-white p-1.5 sm:min-h-28 sm:p-2 ${
+                        className={`min-h-24 bg-card p-1.5 sm:min-h-28 sm:p-2 ${
                           isCurrentMonth ? "" : "opacity-45"
                         }`}
                       >
@@ -1335,10 +1398,10 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                           aria-pressed={isSelected}
                           className={`mb-1 flex size-7 items-center justify-center rounded-full text-xs font-semibold ${
                             isToday
-                              ? "bg-[#CAF0F8] text-[#1E6AE0] ring-1 ring-[#00B4D8]"
+                              ? "bg-secondary text-secondary-foreground ring-1 ring-ring"
                               : isSelected
-                                ? "text-[#023EBA] ring-1 ring-[#023EBA]/25"
-                                : "text-slate-600 hover:bg-slate-100"
+                                ? "text-primary ring-1 ring-primary/25"
+                                : "text-secondary-foreground hover:bg-muted"
                           }`}
                         >
                           {date.getDate()}
@@ -1351,7 +1414,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                               type="button"
                               onClick={(event) => openPopup(event, "lecture", lecture)}
                               title={lecture.course_name}
-                              className="block w-full truncate rounded px-1 py-0.5 text-left text-[8px] font-semibold text-[#023EBA] sm:text-[9px]"
+                              className="block w-full truncate rounded px-1 py-0.5 text-left text-[8px] font-semibold text-primary sm:text-[9px]"
                               style={{ backgroundColor: hexToRgba(lecture.course_color, 0.16) }}
                             >
                               {lecture.course_code || lecture.course_name}
@@ -1363,7 +1426,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                               type="button"
                               onClick={(event) => openPopup(event, "study", session)}
                               title={getCourse(session.course_id)?.name || session.topic || "Study Session"}
-                              className="block w-full truncate rounded bg-[#CAF0F8] px-1 py-0.5 text-left text-[8px] font-semibold text-[#1E6AE0] sm:text-[9px]"
+                              className="block w-full truncate rounded bg-secondary px-1 py-0.5 text-left text-[8px] font-semibold text-secondary-foreground sm:text-[9px]"
                             >
                               {getCourse(session.course_id)?.name || session.topic || "Study"}
                             </button>
@@ -1374,7 +1437,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                               type="button"
                               onClick={(event) => openPopup(event, "event", item)}
                               title={item.title}
-                              className="block w-full truncate rounded bg-[#FBB02D]/20 px-1 py-0.5 text-left text-[8px] font-semibold text-[#5E4200] sm:text-[9px]"
+                              className="block w-full truncate rounded bg-warning/10 px-1 py-0.5 text-left text-[8px] font-semibold text-warning sm:text-[9px]"
                             >
                               {item.title}
                             </button>
@@ -1385,7 +1448,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                   })}
                 </div>
               ) : (
-              <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="mt-3 overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
                 {/* =================================================
                     CALENDAR BODY
                 ================================================== */}
@@ -1403,7 +1466,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                       TIME COLUMN
                   ================================================== */}
 
-                  <div className="relative bg-white">
+                  <div className="relative bg-card">
                     {TIME_SLOTS.map((hour) => (
                       <div
                         key={hour}
@@ -1412,7 +1475,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                           height: ROW_HEIGHT,
                         }}
                       >
-                        <span className="text-[10px] font-semibold tabular-nums text-slate-400">
+                        <span className="text-[10px] font-semibold tabular-nums text-muted-foreground">
                           {formatTime(
                             `${String(hour).padStart(
                               2,
@@ -1449,8 +1512,8 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                         key={day.key}
                         className={`relative ${
                           isToday
-                            ? "bg-[#f3fbf9]"
-                            : "bg-white"
+                            ? "bg-accent/10"
+                            : "bg-card"
                         }`}
                         style={{
                           height:
@@ -1545,7 +1608,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
 
                               const lectureColor =
                                 lecture.course_color ||
-                                "#8b9ee8";
+                                "var(--primary)";
 
                               const isSelected =
                                 selectedLecture?.id ===
@@ -1613,7 +1676,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                                     {/* COURSE NAME */}
 
                                       <div
-                                        className="mt-1 line-clamp-2 text-[9px] font-bold leading-tight text-slate-800"
+                                        className="mt-1 line-clamp-2 text-[9px] font-bold leading-tight text-foreground"
                                         title={lecture.course_name}
                                       >
                                       {
@@ -1623,7 +1686,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
 
                                     {/* TIME */}
 
-                                    <div className="mt-1.5 flex items-center gap-1 text-[9px] font-medium tabular-nums text-slate-500">
+                                    <div className="mt-1.5 flex items-center gap-1 text-[9px] font-medium tabular-nums text-muted-foreground">
                                       <Clock className="h-2.5 w-2.5 shrink-0" />
 
                                       <span className="truncate">
@@ -1640,7 +1703,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                                     {/* VENUE */}
 
                                     {lecture.venue && (
-                                      <div className="mt-1 flex items-center gap-1 truncate text-[9px] text-slate-500">
+                                      <div className="mt-1 flex items-center gap-1 truncate text-[9px] text-muted-foreground">
                                         <MapPin className="h-2.5 w-2.5 shrink-0" />
 
                                         <span className="truncate">
@@ -1788,7 +1851,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                                     {/* TOPIC */}
 
                                     <div
-                                      className="mt-1 line-clamp-2 text-[9px] font-bold leading-tight text-slate-800"
+                                      className="mt-1 line-clamp-2 text-[9px] font-bold leading-tight text-foreground"
                                       title={course?.name || session.topic || "Study Session"}
                                     >
                                       {course?.name || session.topic || "Study Session"}
@@ -1799,14 +1862,14 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                                     {session.topic &&
                                       session.topic !== course?.name &&
                                       height >= 70 && (
-                                        <div className="mt-0.5 truncate text-[9px] font-medium text-slate-500">
+                                        <div className="mt-0.5 truncate text-[9px] font-medium text-muted-foreground">
                                           {session.topic}
                                         </div>
                                       )}
 
                                     {/* TIME */}
 
-                                    <div className="mt-1.5 flex items-center gap-1 text-[9px] font-medium tabular-nums text-slate-600">
+                                    <div className="mt-1.5 flex items-center gap-1 text-[9px] font-medium tabular-nums text-secondary-foreground">
                                       <Clock className="h-2.5 w-2.5 shrink-0" />
 
                                       <span className="truncate">
@@ -1824,7 +1887,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
 
                                     {session.venue &&
                                       height >= 95 && (
-                                        <div className="mt-1 flex items-center gap-1 truncate text-[9px] text-slate-500">
+                                        <div className="mt-1 flex items-center gap-1 truncate text-[9px] text-muted-foreground">
                                           <MapPin className="h-2.5 w-2.5 shrink-0" />
 
                                           <span className="truncate">
@@ -1839,7 +1902,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
 
                                     {height >= 115 && (
                                       <div className="mt-1.5">
-                                        <span className="inline-flex rounded-md bg-white/70 px-1.5 py-0.5 text-[8px] font-medium text-slate-500">
+                                        <span className="inline-flex rounded-md bg-card/70 px-1.5 py-0.5 text-[8px] font-medium text-muted-foreground">
                                           {getStatusLabel(
                                             session.status
                                           )}
@@ -1921,13 +1984,13 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
 
                                   {/* TITLE */}
 
-                                  <div className="mt-1 truncate text-[11px] font-bold leading-tight text-slate-800">
+                                  <div className="mt-1 truncate text-[11px] font-bold leading-tight text-foreground">
                                     {event.title}
                                   </div>
 
                                   {/* TIME */}
 
-                                  <div className="mt-1.5 flex items-center gap-1 text-[9px] font-medium tabular-nums text-slate-600">
+                                  <div className="mt-1.5 flex items-center gap-1 text-[9px] font-medium tabular-nums text-secondary-foreground">
                                     <Clock className="h-2.5 w-2.5 shrink-0" style={{ color: eventColor }} />
 
                                     <span className="truncate">
@@ -1945,7 +2008,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
 
                                   {event.location &&
                                     height >= 80 && (
-                                      <div className="mt-1 flex items-center gap-1 truncate text-[9px] text-slate-500">
+                                      <div className="mt-1 flex items-center gap-1 truncate text-[9px] text-muted-foreground">
                                         <MapPin className="h-2.5 w-2.5 shrink-0" style={{ color: eventColor }} />
 
                                         <span className="truncate">
@@ -1977,7 +2040,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
         selectedEvent) && (
         <div
           ref={popupRef}
-          className="fixed z-70 max-h-[calc(100vh-24px)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_20px_55px_rgba(15,23,42,0.18)] ring-1 ring-black/5"
+          className="fixed z-70 max-h-[calc(100vh-24px)] overflow-hidden rounded-2xl border border-border bg-card shadow-xl ring-1 ring-border/50"
           style={{
             top: popupPosition.top,
             left: popupPosition.left,
@@ -1988,7 +2051,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
             event.stopPropagation()
           }
         >
-          {/* OCEAN ROYALE ACCENT */}
+          {/* COURSE-COLOR ACCENT */}
 
           <div
             className="h-1 w-full"
@@ -2005,7 +2068,13 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
 
           {selectedLecture && (
             <>
-              <div className="border-b border-slate-100 px-4 py-3">
+              <div
+                className="cursor-move touch-none select-none border-b border-border px-4 py-3"
+                onPointerDown={startPopupDrag}
+                onPointerMove={movePopup}
+                onPointerUp={stopPopupDrag}
+                onPointerCancel={stopPopupDrag}
+              >
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <div className="mb-2 flex items-center gap-2">
@@ -2038,11 +2107,11 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                       </p>
                     </div>
 
-                    <h3 className="line-clamp-2 text-sm font-semibold leading-tight text-slate-900">
+                    <h3 className="line-clamp-2 text-sm font-semibold leading-tight text-foreground">
                       {selectedLecture.course_name}
                     </h3>
 
-                    <p className="mt-1 text-xs font-medium text-slate-500">
+                    <p className="mt-1 text-xs font-medium text-muted-foreground">
                       {selectedLecture.course_code}
                     </p>
                   </div>
@@ -2050,7 +2119,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                   <button
                     type="button"
                     onClick={closePopup}
-                    className="shrink-0 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                    className="shrink-0 rounded-lg p-2 text-muted-foreground transition hover:bg-muted hover:text-secondary-foreground"
                     aria-label="Close lecture details"
                   >
                     <X className="h-4 w-4" />
@@ -2059,15 +2128,15 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
               </div>
 
               <div className="grid grid-cols-2 gap-2 px-3 py-3">
-                <div className="flex min-w-0 items-start gap-2 rounded-lg bg-[#f4fbff] p-2">
+                <div className="flex min-w-0 items-start gap-2 rounded-lg bg-background p-2">
                   <CalendarDays className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
 
                   <div>
-                    <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                       Day
                     </p>
 
-                    <p className="mt-0.5 line-clamp-2 text-xs font-medium leading-tight text-slate-800">
+                    <p className="mt-0.5 line-clamp-2 text-xs font-medium leading-tight text-foreground">
                       {
                         DAYS[
                           selectedLecture.day_of_week
@@ -2077,15 +2146,15 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                   </div>
                 </div>
 
-                <div className="flex min-w-0 items-start gap-2 rounded-lg bg-[#f4fbff] p-2">
+                <div className="flex min-w-0 items-start gap-2 rounded-lg bg-background p-2">
                   <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
 
                   <div>
-                    <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                       Time
                     </p>
 
-                    <p className="mt-0.5 line-clamp-2 text-xs font-medium leading-tight text-slate-800">
+                    <p className="mt-0.5 line-clamp-2 text-xs font-medium leading-tight text-foreground">
                       {formatTime(
                         selectedLecture.start_time
                       )}{" "}
@@ -2098,15 +2167,15 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                 </div>
 
                 {selectedLecture.venue && (
-                  <div className="flex min-w-0 items-start gap-2 rounded-lg bg-[#f4fbff] p-2">
+                  <div className="flex min-w-0 items-start gap-2 rounded-lg bg-background p-2">
                     <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
 
                     <div>
-                      <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                         Venue
                       </p>
 
-                      <p className="mt-0.5 line-clamp-2 text-xs font-medium leading-tight text-slate-800">
+                      <p className="mt-0.5 line-clamp-2 text-xs font-medium leading-tight text-foreground">
                         {selectedLecture.venue}
                       </p>
                     </div>
@@ -2114,15 +2183,15 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                 )}
 
                 {selectedLecture.lecturer && (
-                  <div className="flex min-w-0 items-start gap-2 rounded-lg bg-[#f4fbff] p-2">
+                  <div className="flex min-w-0 items-start gap-2 rounded-lg bg-background p-2">
                     <GraduationCap className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
 
                     <div>
-                      <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                         Lecturer
                       </p>
 
-                      <p className="mt-0.5 line-clamp-2 text-xs font-medium leading-tight text-slate-800">
+                      <p className="mt-0.5 line-clamp-2 text-xs font-medium leading-tight text-foreground">
                         {selectedLecture.lecturer}
                       </p>
                     </div>
@@ -2138,7 +2207,13 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
 
           {selectedStudySession && (
             <>
-              <div className="border-b border-slate-100 px-4 py-3">
+              <div
+                className="cursor-move touch-none select-none border-b border-border px-4 py-3"
+                onPointerDown={startPopupDrag}
+                onPointerMove={movePopup}
+                onPointerUp={stopPopupDrag}
+                onPointerCancel={stopPopupDrag}
+              >
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <div className="mb-2 flex items-center gap-2">
@@ -2161,7 +2236,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                       </p>
                     </div>
 
-                    <h3 className="line-clamp-2 text-sm font-semibold leading-tight text-slate-900">
+                    <h3 className="line-clamp-2 text-sm font-semibold leading-tight text-foreground">
                       {selectedStudySession.topic ||
                         getCourse(
                           selectedStudySession.course_id
@@ -2172,7 +2247,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                     {getCourse(
                       selectedStudySession.course_id
                     )?.code && (
-                      <p className="mt-1 text-xs font-medium text-slate-500">
+                      <p className="mt-1 text-xs font-medium text-muted-foreground">
                         {
                           getCourse(
                             selectedStudySession.course_id
@@ -2185,7 +2260,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                   <button
                     type="button"
                     onClick={closePopup}
-                    className="shrink-0 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                    className="shrink-0 rounded-lg p-2 text-muted-foreground transition hover:bg-muted hover:text-secondary-foreground"
                     aria-label="Close study session details"
                   >
                     <X className="h-4 w-4" />
@@ -2194,15 +2269,15 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
               </div>
 
               <div className="grid grid-cols-2 gap-2 px-3 py-3">
-                <div className="flex min-w-0 items-start gap-2 rounded-lg bg-[#f4fbff] p-2">
+                <div className="flex min-w-0 items-start gap-2 rounded-lg bg-background p-2">
                   <CalendarDays className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
 
                   <div>
-                    <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                       Date
                     </p>
 
-                    <p className="mt-0.5 line-clamp-2 text-xs font-medium leading-tight text-slate-800">
+                    <p className="mt-0.5 line-clamp-2 text-xs font-medium leading-tight text-foreground">
                       {formatDate(
                         new Date(
                           `${selectedStudySession.session_date}T00:00:00`
@@ -2212,15 +2287,15 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                   </div>
                 </div>
 
-                <div className="flex min-w-0 items-start gap-2 rounded-lg bg-[#f4fbff] p-2">
+                <div className="flex min-w-0 items-start gap-2 rounded-lg bg-background p-2">
                   <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
 
                   <div>
-                    <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                       Time
                     </p>
 
-                    <p className="mt-0.5 line-clamp-2 text-xs font-medium leading-tight text-slate-800">
+                    <p className="mt-0.5 line-clamp-2 text-xs font-medium leading-tight text-foreground">
                       {formatTime(
                         selectedStudySession.start_time
                       )}{" "}
@@ -2233,15 +2308,15 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                 </div>
 
                 {selectedStudySession.venue && (
-                  <div className="flex min-w-0 items-start gap-2 rounded-lg bg-[#f4fbff] p-2">
+                  <div className="flex min-w-0 items-start gap-2 rounded-lg bg-background p-2">
                     <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
 
                     <div>
-                      <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                         Venue
                       </p>
 
-                      <p className="mt-0.5 line-clamp-2 text-xs font-medium leading-tight text-slate-800">
+                      <p className="mt-0.5 line-clamp-2 text-xs font-medium leading-tight text-foreground">
                         {selectedStudySession.venue}
                       </p>
                     </div>
@@ -2250,11 +2325,11 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
 
                 <div className="col-span-2 grid grid-cols-2 gap-2">
                   <div>
-                    <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                       Priority
                     </p>
 
-                    <p className="mt-0.5 text-xs font-medium text-slate-800">
+                    <p className="mt-0.5 text-xs font-medium text-foreground">
                       {getPriorityLabel(
                         selectedStudySession.priority
                       )}
@@ -2262,11 +2337,11 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                   </div>
 
                   <div>
-                    <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                       Status
                     </p>
 
-                    <p className="mt-0.5 text-xs font-medium text-slate-800">
+                    <p className="mt-0.5 text-xs font-medium text-foreground">
                       {getStatusLabel(
                         selectedStudySession.status
                       )}
@@ -2275,12 +2350,12 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                 </div>
 
                 {selectedStudySession.notes && (
-                  <div className="col-span-2 rounded-lg bg-slate-50 p-2">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                  <div className="col-span-2 rounded-lg bg-muted p-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                       Notes
                     </p>
 
-                    <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-slate-700">
+                    <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-secondary-foreground">
                       {selectedStudySession.notes}
                     </p>
                   </div>
@@ -2297,7 +2372,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
 
           {/* ACTIONS */}
 
-          <div className="flex items-center justify-between border-t border-slate-100 px-3 py-2">
+          <div className="flex items-center justify-between border-t border-border px-3 py-2">
             {/* DELETE — shows confirm step on first click */}
             {!confirmingDelete ? (
               <button
@@ -2306,14 +2381,14 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                   setConfirmingDelete(true);
                   setDeleteError(null);
                 }}
-                className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-50"
+                className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-destructive transition hover:bg-destructive/10"
               >
                 <Trash2 className="h-3.5 w-3.5" />
                 Delete
               </button>
             ) : (
               <div className="flex items-center gap-1.5">
-                <span className="text-[11px] text-slate-500">
+                <span className="text-[11px] text-muted-foreground">
                   Are you sure?
                 </span>
 
@@ -2321,7 +2396,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                   type="button"
                   onClick={handleDeleteSession}
                   disabled={isDeleting}
-                  className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
+                  className="rounded-lg bg-destructive px-2.5 py-1 text-[11px] font-semibold text-destructive-foreground transition hover:bg-destructive/90 disabled:opacity-60"
                 >
                   {isDeleting ? "Deleting…" : "Yes, delete"}
                 </button>
@@ -2332,7 +2407,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                     setConfirmingDelete(false);
                     setDeleteError(null);
                   }}
-                  className="rounded-lg px-2.5 py-1 text-[11px] font-semibold text-slate-500 transition hover:bg-slate-100"
+                  className="rounded-lg px-2.5 py-1 text-[11px] font-semibold text-muted-foreground transition hover:bg-muted"
                 >
                   Cancel
                 </button>
@@ -2346,7 +2421,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                 setReschedulingSession(selectedStudySession);
                 closePopup();
               }}
-              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
+              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-secondary-foreground transition hover:bg-muted"
             >
               <CalendarClock className="h-3.5 w-3.5" />
               Reschedule
@@ -2359,7 +2434,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                 setEditingSession(selectedStudySession);
                 closePopup();
               }}
-              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-[#023EBA] transition hover:bg-[#CAF0F8]"
+              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-secondary"
             >
               <Pencil className="h-3.5 w-3.5" />
               Edit
@@ -2375,7 +2450,13 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
 
           {selectedEvent && (
             <>
-              <div className="border-b border-slate-100 px-4 py-3">
+              <div
+                className="cursor-move touch-none select-none border-b border-border px-4 py-3"
+                onPointerDown={startPopupDrag}
+                onPointerMove={movePopup}
+                onPointerUp={stopPopupDrag}
+                onPointerCancel={stopPopupDrag}
+              >
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <div className="mb-2 flex items-center gap-2">
@@ -2398,7 +2479,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                       </p>
                     </div>
 
-                    <h3 className="line-clamp-2 text-sm font-semibold leading-tight text-slate-900">
+                    <h3 className="line-clamp-2 text-sm font-semibold leading-tight text-foreground">
                       {selectedEvent.title}
                     </h3>
                   </div>
@@ -2406,7 +2487,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                   <button
                     type="button"
                     onClick={closePopup}
-                    className="shrink-0 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                    className="shrink-0 rounded-lg p-2 text-muted-foreground transition hover:bg-muted hover:text-secondary-foreground"
                     aria-label="Close event details"
                   >
                     <X className="h-4 w-4" />
@@ -2415,15 +2496,15 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
               </div>
 
               <div className="grid grid-cols-2 gap-2 px-3 py-3">
-                <div className="flex min-w-0 items-start gap-2 rounded-lg bg-[#f4fbff] p-2">
+                <div className="flex min-w-0 items-start gap-2 rounded-lg bg-background p-2">
                   <CalendarDays className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
 
                   <div>
-                    <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                       Date
                     </p>
 
-                    <p className="mt-0.5 line-clamp-2 text-xs font-medium leading-tight text-slate-800">
+                    <p className="mt-0.5 line-clamp-2 text-xs font-medium leading-tight text-foreground">
                       {formatDate(
                         new Date(
                           `${selectedEvent.event_date}T00:00:00`
@@ -2433,15 +2514,15 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                   </div>
                 </div>
 
-                <div className="flex min-w-0 items-start gap-2 rounded-lg bg-[#f4fbff] p-2">
+                <div className="flex min-w-0 items-start gap-2 rounded-lg bg-background p-2">
                   <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
 
                   <div>
-                    <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                       Time
                     </p>
 
-                    <p className="mt-0.5 line-clamp-2 text-xs font-medium leading-tight text-slate-800">
+                    <p className="mt-0.5 line-clamp-2 text-xs font-medium leading-tight text-foreground">
                       {selectedEvent.start_time &&
                       selectedEvent.end_time
                         ? `${formatTime(
@@ -2455,15 +2536,15 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                 </div>
 
                 {selectedEvent.location && (
-                  <div className="flex min-w-0 items-start gap-2 rounded-lg bg-[#f4fbff] p-2">
+                  <div className="flex min-w-0 items-start gap-2 rounded-lg bg-background p-2">
                     <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
 
                     <div>
-                      <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                         Location
                       </p>
 
-                      <p className="mt-0.5 line-clamp-2 text-xs font-medium leading-tight text-slate-800">
+                      <p className="mt-0.5 line-clamp-2 text-xs font-medium leading-tight text-foreground">
                         {selectedEvent.location}
                       </p>
                     </div>
@@ -2472,11 +2553,11 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
 
                 <div className="col-span-2 grid grid-cols-2 gap-2">
                   <div>
-                    <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                       Flexibility
                     </p>
 
-                    <p className="mt-0.5 text-xs font-medium text-slate-800">
+                    <p className="mt-0.5 text-xs font-medium text-foreground">
                       {getFlexibilityLabel(
                         selectedEvent.flexibility
                       )}
@@ -2484,11 +2565,11 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                   </div>
 
                   <div>
-                    <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                       Recurring
                     </p>
 
-                    <p className="mt-0.5 text-xs font-medium text-slate-800">
+                    <p className="mt-0.5 text-xs font-medium text-foreground">
                       {selectedEvent.is_recurring
                         ? "Yes"
                         : "No"}
@@ -2497,24 +2578,24 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                 </div>
 
                 {selectedEvent.description && (
-                  <div className="col-span-2 rounded-lg bg-slate-50 p-2">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                  <div className="col-span-2 rounded-lg bg-muted p-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                       Description
                     </p>
 
-                    <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-slate-700">
+                    <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-secondary-foreground">
                       {selectedEvent.description}
                     </p>
                   </div>
                 )}
 
                 {selectedEvent.notes && (
-                  <div className="col-span-2 rounded-lg bg-slate-50 p-2">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                  <div className="col-span-2 rounded-lg bg-muted p-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                       Notes
                     </p>
 
-                    <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-slate-700">
+                    <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-secondary-foreground">
                       {selectedEvent.notes}
                     </p>
                   </div>

@@ -1,8 +1,7 @@
-import { UserRound, Sun, Moon } from "lucide-react";
+import { LogOut, UserRound } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { useAuth } from "@/context/AuthContext";
-import { useTheme } from "@/hooks/useTheme";
 import NotificationBell from "@/components/notifications/NotificationBell";
 
 interface TopBarProps {
@@ -10,11 +9,15 @@ interface TopBarProps {
 }
 
 export default function TopBar({ title }: TopBarProps) {
-  const { user } = useAuth();
-  const { theme, toggleTheme } = useTheme();
+  const { user, logout } = useAuth();
+
+  const handleLogout = async () => {
+    await logout();
+    window.location.href = "/login";
+  };
 
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-background/95 px-6 backdrop-blur supports-backdrop-filter:bg-background/80">
+    <header className="flex h-16 shrink-0 items-center justify-between bg-background/95 px-6 backdrop-blur supports-backdrop-filter:bg-background/80">
       {/* Page title */}
       <div className="min-w-0">
         <h1 className="truncate text-lg font-semibold tracking-tight">
@@ -24,33 +27,17 @@ export default function TopBar({ title }: TopBarProps) {
 
       {/* User area */}
       <div className="flex items-center gap-2">
-        {/* Dark mode toggle */}
+        <NotificationBell />
+
         <button
           type="button"
-          onClick={toggleTheme}
-          aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-          title={theme === "dark" ? "Light mode" : "Dark mode"}
-          className="relative flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-accent hover:text-accent-foreground"
+          onClick={handleLogout}
+          aria-label="Sign out"
+          title="Sign out"
+          className="flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-accent hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         >
-          {/* Sun icon — visible in dark mode */}
-          <Sun
-            className={`absolute h-4.5 w-4.5 transition-all duration-300 ${
-              theme === "dark"
-                ? "rotate-0 scale-100 opacity-100"
-                : "rotate-90 scale-0 opacity-0"
-            }`}
-          />
-          {/* Moon icon — visible in light mode */}
-          <Moon
-            className={`absolute h-4.5 w-4.5 transition-all duration-300 ${
-              theme === "dark"
-                ? "-rotate-90 scale-0 opacity-0"
-                : "rotate-0 scale-100 opacity-100"
-            }`}
-          />
+          <LogOut className="size-4.5" />
         </button>
-
-        <NotificationBell />
 
         <Link
           to="/profile"

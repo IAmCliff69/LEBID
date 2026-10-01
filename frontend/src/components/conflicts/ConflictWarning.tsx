@@ -23,10 +23,10 @@ export default function ConflictWarning({ conflicts }: Props) {
   if (conflicts.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 space-y-2">
+    <div className="rounded-xl border border-warning/20 bg-warning/10 px-4 py-3 space-y-2">
       <div className="flex items-center gap-2">
-        <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
-        <p className="text-xs font-semibold text-amber-800">
+        <AlertTriangle className="h-4 w-4 shrink-0 text-warning" />
+        <p className="text-xs font-semibold text-warning">
           {conflicts.length === 1
             ? "This time slot has a conflict"
             : `This time slot has ${conflicts.length} conflicts`}
@@ -39,21 +39,21 @@ export default function ConflictWarning({ conflicts }: Props) {
           return (
             <div
               key={i}
-              className="flex items-start gap-2 rounded-lg bg-white/70 px-3 py-2"
+              className="flex items-start gap-2 rounded-lg bg-card/70 px-3 py-2"
             >
-              <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />
+              <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-warning">
                   {TYPE_LABEL[c.conflict_type] ?? c.conflict_type}
                 </p>
-                <p className="text-xs text-slate-700">{c.description}</p>
+                <p className="text-xs text-secondary-foreground">{c.description}</p>
               </div>
             </div>
           );
         })}
       </div>
 
-      <p className="text-[10px] text-amber-700">
+      <p className="text-[10px] text-warning">
         You can still save — this is a warning, not a block.
       </p>
     </div>

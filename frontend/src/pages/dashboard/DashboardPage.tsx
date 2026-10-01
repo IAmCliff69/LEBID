@@ -7,27 +7,39 @@ import {
   ListTodo,
 } from "lucide-react";
 
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
+import { getAssignments } from "@/api/assignments";
+import { getStudySessions } from "@/api/studySessions";
+import { getTasks } from "@/api/tasks";
+import { getTimetable } from "@/api/timetable";
 import { useAuth } from "@/context/AuthContext";
+
+function toDateKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 const overviewCards = [
   {
     label: "Today's Classes",
-    value: "—",
     description: "Your scheduled classes for today",
     icon: CalendarDays,
+    href: "/timetable",
   },
   {
     label: "Upcoming Deadlines",
-    value: "—",
     description: "Assignments and tasks coming up",
     icon: Clock3,
+    href: "/assignments",
   },
   {
     label: "Study Sessions",
-    value: "—",
     description: "Planned study sessions",
     icon: BookOpen,
+    href: "/planner",
   },
 ];
 
@@ -54,9 +66,49 @@ const quickActions = [
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const overviewQuery = useQuery({
+    queryKey: ["dashboard-overview"],
+    queryFn: async () => {
+      const [timetable, assignments, tasks, studySessions] = await Promise.all([
+        getTimetable(),
+        getAssignments(),
+        getTasks(),
+        getStudySessions({
+          date_from: toDateKey(new Date()),
+          date_to: toDateKey(new Date()),
+        }),
+      ]);
+      const today = new Date();
+      const todayKey = toDateKey(today);
+      const weekday = (today.getDay() + 6) % 7;
+      const upcomingDeadlines = [...assignments, ...tasks].filter((item) => {
+        return (
+          item.status !== "completed" &&
+          item.deadline !== null &&
+          item.deadline.slice(0, 10) >= todayKey
+        );
+      }).length;
+
+      return {
+        classesToday: timetable.filter((entry) => entry.day_of_week === weekday)
+          .length,
+        upcomingDeadlines,
+        studySessions: studySessions.filter(
+          (session) =>
+            session.status === "planned" || session.status === "in_progress"
+        ).length,
+      };
+    },
+  });
 
   const firstName =
   user?.full_name?.split(" ")[0] ?? "Student";
+
+  const overviewValues = [
+    overviewQuery.data?.classesToday,
+    overviewQuery.data?.upcomingDeadlines,
+    overviewQuery.data?.studySessions,
+  ];
 
   return (
     <>
@@ -94,13 +146,14 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            {overviewCards.map((card) => {
+            {overviewCards.map((card, index) => {
               const Icon = card.icon;
 
               return (
-                <div
+                <Link
                   key={card.label}
-                  className="group rounded-2xl border border-border bg-card p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                  to={card.href}
+                  className="group rounded-2xl border border-border bg-card p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div>
@@ -109,7 +162,9 @@ export default function DashboardPage() {
                       </p>
 
                       <p className="mt-3 text-3xl font-bold tracking-tight">
-                        {card.value}
+                        {overviewQuery.isLoading
+                          ? "..."
+                          : overviewValues[index] ?? "—"}
                       </p>
                     </div>
 
@@ -121,10 +176,22 @@ export default function DashboardPage() {
                   <p className="mt-3 text-xs text-muted-foreground">
                     {card.description}
                   </p>
-                </div>
+                </Link>
               );
             })}
           </div>
+          {overviewQuery.isError && (
+            <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-destructive">
+              <p>Dashboard data could not be loaded.</p>
+              <button
+                type="button"
+                onClick={() => overviewQuery.refetch()}
+                className="font-semibold underline underline-offset-4"
+              >
+                Retry
+              </button>
+            </div>
+          )}
         </section>
 
         {/* Quick access */}
@@ -188,9 +255,12 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="shrink-0 rounded-xl bg-primary px-4 py-2.5 text-xs font-medium text-primary-foreground shadow-sm">
+            <Link
+              to="/courses"
+              className="shrink-0 rounded-xl bg-primary px-4 py-2.5 text-xs font-medium text-primary-foreground shadow-sm transition hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
               Let's get started
-            </div>
+            </Link>
           </div>
         </section>
       </div>

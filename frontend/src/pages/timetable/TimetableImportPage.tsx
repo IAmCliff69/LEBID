@@ -216,7 +216,7 @@ export default function TimetableImportPage() {
   // ─────────────────────────────────────────────────────────────────────────
 
   return (
-    <div className="theme-aware-surface max-w-4xl mx-auto space-y-6">
+    <div className="mx-auto max-w-4xl space-y-6">
 
       {/* Header */}
       <div>
@@ -240,23 +240,23 @@ export default function TimetableImportPage() {
               <div
                 className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold ${
                   active
-                    ? "bg-[#023EBA] text-white"
+                    ? "bg-primary text-primary-foreground"
                     : past
-                      ? "bg-green-500 text-white"
-                      : "bg-slate-200 text-slate-500"
+                      ? "bg-success text-success-foreground"
+                      : "bg-border text-muted-foreground"
                 }`}
               >
                 {past ? "✓" : i + 1}
               </div>
               <span
                 className={`text-xs font-medium ${
-                  active ? "text-slate-900" : "text-slate-400"
+                  active ? "text-foreground" : "text-muted-foreground"
                 }`}
               >
                 {labels[i]}
               </span>
               {i < 2 && (
-                <div className="mx-1 h-px w-8 bg-slate-200" />
+                <div className="mx-1 h-px w-8 bg-border" />
               )}
             </div>
           );
@@ -275,8 +275,8 @@ export default function TimetableImportPage() {
             onClick={() => fileInputRef.current?.click()}
             className={`cursor-pointer rounded-2xl border-2 border-dashed p-12 text-center transition ${
               dragOver
-                ? "border-[#023EBA] bg-[#f4fbff]"
-                : "border-slate-200 bg-slate-50 hover:border-[#023EBA]/40 hover:bg-[#f4fbff]/60"
+                ? "border-primary bg-background"
+                : "border-border bg-muted hover:border-primary/40 hover:bg-background/60"
             }`}
           >
             <input
@@ -290,13 +290,13 @@ export default function TimetableImportPage() {
             {uploading ? (
               <div className="flex flex-col items-center gap-3">
                 <div
-                  className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200"
-                  style={{ borderTopColor: "#023EBA" }}
+                  className="h-8 w-8 animate-spin rounded-full border-2 border-border"
+                  style={{ borderTopColor: "var(--primary)" }}
                 />
-                <p className="text-sm font-medium text-slate-600">
+                <p className="text-sm font-medium text-secondary-foreground">
                   Extracting your timetable...
                 </p>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-muted-foreground">
                   This may take a few seconds.
                 </p>
               </div>
@@ -304,15 +304,15 @@ export default function TimetableImportPage() {
               <div className="flex flex-col items-center gap-3">
                 <div
                   className="flex h-14 w-14 items-center justify-center rounded-2xl"
-                  style={{ backgroundColor: "#CAF0F8", color: "#023EBA" }}
+                  style={{ backgroundColor: "var(--secondary)", color: "var(--secondary-foreground)" }}
                 >
                   <Upload className="h-6 w-6" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-slate-800">
+                  <p className="text-sm font-semibold text-foreground">
                     Drop your timetable here
                   </p>
-                  <p className="mt-1 text-xs text-slate-400">
+                  <p className="mt-1 text-xs text-muted-foreground">
                     or click to browse — JPEG, PNG, WebP or PDF, up to 10MB
                   </p>
                 </div>
@@ -321,11 +321,11 @@ export default function TimetableImportPage() {
           </div>
 
           {/* Tips */}
-          <div className="rounded-xl border border-[#CAF0F8] bg-[#f4fbff] px-4 py-3 space-y-1">
-            <p className="text-xs font-semibold text-[#023EBA]">
+          <div className="rounded-xl border border-secondary bg-background px-4 py-3 space-y-1">
+            <p className="text-xs font-semibold text-primary">
               For best results
             </p>
-            <ul className="text-xs text-slate-600 space-y-0.5 list-disc list-inside">
+            <ul className="text-xs text-secondary-foreground space-y-0.5 list-disc list-inside">
               <li>Use a clear, well-lit photo if photographing a physical timetable.</li>
               <li>Make sure all text is readable and not cut off.</li>
               <li>A direct PDF download from your institution works best.</li>
@@ -349,24 +349,24 @@ export default function TimetableImportPage() {
         <div className="space-y-5">
 
           {/* Extraction summary */}
-          <div className="rounded-xl border border-[#CAF0F8] bg-[#f4fbff] px-4 py-3 space-y-1">
-            <p className="text-xs font-semibold text-[#023EBA]">
+          <div className="rounded-xl border border-secondary bg-background px-4 py-3 space-y-1">
+            <p className="text-xs font-semibold text-primary">
               Extraction complete
             </p>
-            <p className="text-xs text-slate-600">{extractionMessage}</p>
+            <p className="text-xs text-secondary-foreground">{extractionMessage}</p>
             {extractionNotes && (
-              <p className="text-xs text-amber-700 mt-1">
+              <p className="text-xs text-warning mt-1">
                 ⚠ {extractionNotes}
               </p>
             )}
           </div>
 
           {/* Important instructions */}
-          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-            <p className="text-xs font-semibold text-amber-800">
+          <div className="rounded-xl border border-warning/20 bg-warning/10 px-4 py-3">
+            <p className="text-xs font-semibold text-warning">
               Review carefully before confirming
             </p>
-            <p className="text-xs text-amber-700 mt-1 leading-relaxed">
+            <p className="text-xs text-warning mt-1 leading-relaxed">
               AI extraction can make mistakes, especially with unclear images.
               Check every entry, correct any errors, and assign each one to a
               course from your course list. Delete any entries that are wrong
@@ -452,16 +452,16 @@ export default function TimetableImportPage() {
         <div className="flex flex-col items-center gap-4 py-12 text-center">
           <div
             className="flex h-16 w-16 items-center justify-center rounded-2xl"
-            style={{ backgroundColor: "#CAF0F8", color: "#023EBA" }}
+            style={{ backgroundColor: "var(--secondary)", color: "var(--secondary-foreground)" }}
           >
             <CheckCircle className="h-8 w-8" />
           </div>
 
           <div>
-            <h3 className="text-lg font-bold text-slate-900">
+            <h3 className="text-lg font-bold text-foreground">
               Timetable imported successfully
             </h3>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-muted-foreground">
               {savedCount} class entr{savedCount === 1 ? "y has" : "ies have"} been
               added to your timetable and will now appear in your planner.
             </p>
@@ -509,7 +509,7 @@ function EntryRow({ draft, courses, onChange, onRemove }: EntryRowProps) {
     <div
       className={`rounded-xl border bg-card transition ${
         !draft.course_id
-          ? "border-amber-200"
+          ? "border-warning/20"
           : "border-border"
       }`}
     >
@@ -518,30 +518,30 @@ function EntryRow({ draft, courses, onChange, onRemove }: EntryRowProps) {
         {/* Day + time */}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-semibold text-slate-800">
+            <span className="text-sm font-semibold text-foreground">
               {DAYS[draft.day_of_week]}
             </span>
-            <span className="text-xs text-slate-500">
+            <span className="text-xs text-muted-foreground">
               {formatTime(draft.start_time)} – {formatTime(draft.end_time)}
             </span>
             {draft.venue && (
-              <span className="text-xs text-slate-400">· {draft.venue}</span>
+              <span className="text-xs text-muted-foreground">· {draft.venue}</span>
             )}
           </div>
 
           <div className="mt-0.5 flex flex-wrap items-center gap-2">
-            <span className="text-xs text-slate-600">
+            <span className="text-xs text-secondary-foreground">
               {draft.course_name || "Unnamed course"}
             </span>
 
             {!draft.course_id && (
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+              <span className="rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-semibold text-warning">
                 Needs a course
               </span>
             )}
 
             {draft.course_id && (
-              <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">
+              <span className="rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-semibold text-success">
                 {courses.find((c) => String(c.id) === draft.course_id)?.code ??
                   "Course assigned"}
               </span>
@@ -554,7 +554,7 @@ function EntryRow({ draft, courses, onChange, onRemove }: EntryRowProps) {
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
-            className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-500 transition hover:bg-slate-100"
+            className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-muted"
           >
             <Pencil className="h-3.5 w-3.5" />
             Edit
@@ -566,7 +566,7 @@ function EntryRow({ draft, courses, onChange, onRemove }: EntryRowProps) {
           <button
             type="button"
             onClick={onRemove}
-            className="rounded-lg p-1.5 text-red-400 transition hover:bg-red-50 hover:text-red-600"
+            className="rounded-lg p-1.5 text-destructive transition hover:bg-destructive/10 hover:text-destructive"
             aria-label="Remove entry"
           >
             <Trash2 className="h-4 w-4" />
@@ -703,7 +703,7 @@ function EntryRow({ draft, courses, onChange, onRemove }: EntryRowProps) {
           <button
             type="button"
             onClick={() => setExpanded(false)}
-            className="text-xs font-medium text-[#023EBA] transition hover:underline"
+            className="text-xs font-medium text-primary transition hover:underline"
           >
             Done editing
           </button>

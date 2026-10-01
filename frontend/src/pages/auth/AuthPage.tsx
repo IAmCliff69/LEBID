@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { z } from "zod";
 
 import { login } from "@/api/auth";
 import { register as registerApi } from "@/api/auth";
 import { useAuth } from "@/context/AuthContext";
+import ThemeToggle from "@/components/layout/ThemeToggle";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -43,11 +44,11 @@ function LebidBrand() {
     <div className="mb-5 flex items-center gap-3">
       <div
         aria-hidden="true"
-        className="relative flex size-12 items-center justify-center rounded-2xl bg-[#fbb02d] text-[#1e6ae0] shadow-[0_8px_18px_rgba(251,176,45,0.28)] ring-1 ring-[#e9a21f]"
+        className="relative flex size-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm ring-1 ring-ring"
       >
         <span className="-mt-0.5 text-[26px] font-extrabold leading-none">L</span>
-        <span className="absolute bottom-2 left-3 h-1 w-3 rounded-full bg-[#00b4d8]" />
-        <span className="absolute -right-1 -top-1 size-3 rounded-full border-2 border-white bg-[#00b4d8]" />
+        <span className="absolute bottom-2 left-3 h-1 w-3 rounded-full bg-secondary" />
+        <span className="absolute -right-1 -top-1 size-3 rounded-full border-2 border-primary-foreground bg-secondary" />
       </div>
       <div className="text-left">
         <p className="text-lg font-bold leading-tight tracking-[0.01em] text-white drop-shadow-sm">
@@ -72,6 +73,7 @@ export default function AuthPage({ initialMode }: { initialMode: "login" | "regi
     pathname: string;
     message: string;
   } | null>(null);
+  const [passwordResetNotice, setPasswordResetNotice] = useState(false);
   const visibleServerError =
     serverError?.pathname === location.pathname ? serverError.message : null;
 
@@ -121,34 +123,34 @@ export default function AuthPage({ initialMode }: { initialMode: "login" | "regi
   };
 
   const inputClassName =
-    "my-1.5 w-full rounded-lg border border-[#d1e8f0] bg-[#f4fbff] px-4 py-3 text-sm text-[#1e6ae0] outline-none transition placeholder:text-[#456476] focus:border-[#00b4d8] focus:bg-white focus:ring-2 focus:ring-[#00b4d8]/15";
+    "my-1.5 w-full rounded-lg border border-input bg-card px-4 py-3 text-sm text-card-foreground outline-none transition placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/20";
   const submitClassName =
-    "mt-3 rounded-full border border-[#023eba] bg-[#023eba] px-11 py-3 text-[13px] font-semibold uppercase tracking-wider text-white shadow-[0_8px_18px_rgba(2,62,186,0.2)] transition hover:border-[#0077b6] hover:bg-[#0077b6] active:scale-95 disabled:cursor-wait disabled:opacity-70";
+    "mt-3 rounded-full border border-primary bg-primary px-11 py-3 text-[13px] font-semibold uppercase tracking-wider text-primary-foreground shadow-sm transition hover:border-primary-hover hover:bg-primary-hover active:scale-95 disabled:cursor-wait disabled:opacity-70";
   const authPanelStyle = {
     backgroundImage: "url('/background.png')",
   };
   const serverErrorBlock = visibleServerError && (
-    <p role="alert" className="mt-2 w-full rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-left text-xs text-red-700">
+    <p role="alert" className="mt-2 w-full rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-left text-xs text-destructive">
       {visibleServerError}
     </p>
   );
 
   return (
     <main
-      className="flex min-h-screen items-center justify-center bg-cover bg-center bg-no-repeat p-4 font-[Montserrat,sans-serif] text-[#1e6ae0]"
+      className="flex min-h-screen items-center justify-center bg-cover bg-center bg-no-repeat p-4 font-[Montserrat,sans-serif] text-foreground"
       style={{
         backgroundImage:
-          "linear-gradient(rgba(30, 106, 224, 0.36), rgba(30, 106, 224, 0.36)), url('/graduation-background.jpg')",
+          "linear-gradient(color-mix(in srgb, var(--primary) 36%, transparent), color-mix(in srgb, var(--primary) 36%, transparent)), url('/graduation-background.jpg')",
       }}
     >
-      <section className="relative min-h-135 w-full max-w- overflow-hidden rounded-2xl border border-[#d1e8f0] bg-[#1e6ae0] shadow-[0_24px_70px_rgba(30,106,224,0.28)] sm:min-h-140">
+      <section className="relative min-h-135 w-full max-w- overflow-hidden rounded-2xl border border-border bg-card shadow-2xl sm:min-h-140">
         <div
           aria-hidden={!isSignUp}
           inert={!isSignUp}
-          className={`absolute inset-0 z-0 flex h-full w-full items-center justify-center transition-all duration-600ms ease-in-out sm:left-0 sm:w-1/2 ${
+          className={`absolute inset-0 z-10 flex h-full w-full items-center justify-center transition-all duration-600 ease-in-out sm:left-0 sm:w-1/2 ${
             isSignUp
-              ? "opacity-100 sm:z-50 sm:translate-x-full"
-              : "pointer-events-none hidden opacity-0 sm:block sm:z-10 sm:translate-x-0"
+              ? "translate-x-0 opacity-100 sm:z-50 sm:translate-x-full"
+              : "pointer-events-none translate-x-full opacity-0 sm:z-10 sm:translate-x-0"
           }`}
         >
           <form
@@ -157,10 +159,10 @@ export default function AuthPage({ initialMode }: { initialMode: "login" | "regi
             style={authPanelStyle}
           >
             <LebidBrand />
-            <h1 className="mb-2 text-[26px] font-bold text-white drop-shadow-[0_1px_3px_rgba(30,106,224,0.95)] sm:text-[28px]">
+            <h1 className="mb-2 text-[26px] font-bold text-white drop-shadow-sm sm:text-[28px]">
               Create Account
             </h1>
-            <p className="mb-3 text-[13px] text-white drop-shadow-[0_1px_3px_rgba(30,106,224,0.95)]">
+            <p className="mb-3 text-[13px] text-white drop-shadow-sm">
               Use your email to get started
             </p>
 
@@ -173,7 +175,7 @@ export default function AuthPage({ initialMode }: { initialMode: "login" | "regi
               {...registerForm.register("name")}
             />
             {registerForm.formState.errors.name && (
-              <p className="w-full text-left text-xs text-red-600">
+              <p className="w-full text-left text-xs text-destructive">
                 {registerForm.formState.errors.name.message}
               </p>
             )}
@@ -187,7 +189,7 @@ export default function AuthPage({ initialMode }: { initialMode: "login" | "regi
               {...registerForm.register("email")}
             />
             {registerForm.formState.errors.email && (
-              <p className="w-full text-left text-xs text-red-600">
+              <p className="w-full text-left text-xs text-destructive">
                 {registerForm.formState.errors.email.message}
               </p>
             )}
@@ -201,7 +203,7 @@ export default function AuthPage({ initialMode }: { initialMode: "login" | "regi
               {...registerForm.register("password")}
             />
             {registerForm.formState.errors.password && (
-              <p className="w-full text-left text-xs text-red-600">
+              <p className="w-full text-left text-xs text-destructive">
                 {registerForm.formState.errors.password.message}
               </p>
             )}
@@ -215,7 +217,7 @@ export default function AuthPage({ initialMode }: { initialMode: "login" | "regi
               {...registerForm.register("confirmPassword")}
             />
             {registerForm.formState.errors.confirmPassword && (
-              <p className="w-full text-left text-xs text-red-600">
+              <p className="w-full text-left text-xs text-destructive">
                 {registerForm.formState.errors.confirmPassword.message}
               </p>
             )}
@@ -234,7 +236,7 @@ export default function AuthPage({ initialMode }: { initialMode: "login" | "regi
               <button
                 type="button"
                 onClick={() => switchMode(false)}
-                className="font-semibold text-[#caf0f8] underline underline-offset-2"
+                className="font-semibold text-primary underline underline-offset-2"
               >
                 Sign in
               </button>
@@ -245,10 +247,10 @@ export default function AuthPage({ initialMode }: { initialMode: "login" | "regi
         <div
           aria-hidden={isSignUp}
           inert={isSignUp}
-          className={`absolute inset-0 z-20 flex h-full w-full items-center justify-center transition-all duration-600ms ease-in-out sm:left-0 sm:w-1/2 ${
+          className={`absolute inset-0 z-20 flex h-full w-full items-center justify-center transition-all duration-600 ease-in-out sm:left-0 sm:w-1/2 ${
             isSignUp
-              ? "pointer-events-none hidden opacity-0 sm:block sm:translate-x-full"
-              : "opacity-100 sm:translate-x-0"
+              ? "pointer-events-none -translate-x-full opacity-0 sm:z-10 sm:translate-x-full"
+              : "translate-x-0 opacity-100 sm:z-20 sm:translate-x-0"
           }`}
         >
           <form
@@ -257,10 +259,10 @@ export default function AuthPage({ initialMode }: { initialMode: "login" | "regi
             style={authPanelStyle}
           >
             <LebidBrand />
-            <h1 className="mb-2 text-[26px] font-bold text-white drop-shadow-[0_1px_3px_rgba(30,106,224,0.95)] sm:text-[28px]">
+            <h1 className="mb-2 text-[26px] font-bold text-white drop-shadow-sm sm:text-[28px]">
               Sign in
             </h1>
-            <p className="mb-3 text-[13px] text-white drop-shadow-[0_1px_3px_rgba(30,106,224,0.95)]">
+            <p className="mb-3 text-[13px] text-white drop-shadow-sm">
               Use your account to continue
             </p>
 
@@ -273,7 +275,7 @@ export default function AuthPage({ initialMode }: { initialMode: "login" | "regi
               {...loginForm.register("email")}
             />
             {loginForm.formState.errors.email && (
-              <p className="w-full text-left text-xs text-red-600">
+              <p className="w-full text-left text-xs text-destructive">
                 {loginForm.formState.errors.email.message}
               </p>
             )}
@@ -287,18 +289,24 @@ export default function AuthPage({ initialMode }: { initialMode: "login" | "regi
               {...loginForm.register("password")}
             />
             {loginForm.formState.errors.password && (
-              <p className="w-full text-left text-xs text-red-600">
+              <p className="w-full text-left text-xs text-destructive">
                 {loginForm.formState.errors.password.message}
               </p>
             )}
 
-            <Link
-              to="/login"
-              onClick={(event) => event.preventDefault()}
-              className="my-2 text-[13px] text-white/90 transition hover:text-[#fbb02d]"
+            <button
+              type="button"
+              onClick={() => setPasswordResetNotice(true)}
+              className="my-2 text-[13px] text-white/90 transition hover:text-primary"
             >
               Forgot your password?
-            </Link>
+            </button>
+
+            {passwordResetNotice && (
+              <p role="status" className="w-full text-left text-xs text-white">
+                Password reset is not available yet. Contact your administrator.
+              </p>
+            )}
 
             {serverErrorBlock}
 
@@ -314,7 +322,7 @@ export default function AuthPage({ initialMode }: { initialMode: "login" | "regi
               <button
                 type="button"
                 onClick={() => switchMode(true)}
-                className="font-semibold text-[#caf0f8] underline underline-offset-2"
+                className="font-semibold text-primary underline underline-offset-2"
               >
                 Sign up
               </button>
@@ -328,7 +336,7 @@ export default function AuthPage({ initialMode }: { initialMode: "login" | "regi
           }`}
         >
           <div
-            className={`relative -left-full h-full w-[200%] bg-linear-to-br from-[#1e6ae0] via-[#023eba] to-[#0077b6] text-white transition-transform duration-600 ease-in-out ${
+            className={`relative -left-full h-full w-[200%] bg-linear-to-br from-primary to-primary-hover text-primary-foreground transition-transform duration-600 ease-in-out ${
               isSignUp ? "translate-x-1/2" : "translate-x-0"
             }`}
           >
@@ -344,7 +352,7 @@ export default function AuthPage({ initialMode }: { initialMode: "login" | "regi
               <button
                 type="button"
                 onClick={() => switchMode(false)}
-                className="rounded-full border border-[#caf0f8] bg-white/5 px-11 py-3 text-[13px] font-semibold uppercase tracking-wider text-white transition hover:border-[#fbb02d] hover:bg-white/10 active:scale-95"
+                className="rounded-full border border-primary-foreground/50 bg-white/5 px-11 py-3 text-[13px] font-semibold uppercase tracking-wider text-primary-foreground transition hover:border-primary-foreground hover:bg-white/10 active:scale-95"
               >
                 Sign In
               </button>
@@ -362,7 +370,7 @@ export default function AuthPage({ initialMode }: { initialMode: "login" | "regi
               <button
                 type="button"
                 onClick={() => switchMode(true)}
-                className="rounded-full border border-[#caf0f8] bg-white/5 px-11 py-3 text-[13px] font-semibold uppercase tracking-wider text-white transition hover:border-[#fbb02d] hover:bg-white/10 active:scale-95"
+                className="rounded-full border border-primary-foreground/50 bg-white/5 px-11 py-3 text-[13px] font-semibold uppercase tracking-wider text-primary-foreground transition hover:border-primary-foreground hover:bg-white/10 active:scale-95"
               >
                 Sign Up
               </button>
@@ -370,6 +378,7 @@ export default function AuthPage({ initialMode }: { initialMode: "login" | "regi
           </div>
         </div>
       </section>
+      <ThemeToggle />
     </main>
   );
 }
