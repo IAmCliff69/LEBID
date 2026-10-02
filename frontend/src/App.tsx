@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
@@ -24,6 +24,7 @@ import ProfilePage from "@/pages/profile/ProfilePage";
 import AiAssistantPage from "@/pages/ai/AiAssistantPage";
 import TimetableImportPage from "@/pages/timetable/TimetableImportPage";
 import ConflictCheckerPage from "@/pages/conflicts/ConflictCheckerPage";
+import AccountCreationPage from "@/pages/auth/AccountCreationPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -53,18 +54,13 @@ function ProtectedLayout({
 }
 
 function AuthLayout() {
-  return (
-    <>
-      <AuthPage initialMode="login" />
-      <Outlet />
-    </>
-  );
+  return <AuthPage initialMode="login" />;
 }
 
 // Everything that depends on the session lives here, inside AuthProvider.
 // The session check starts as soon as the app opens, while the splash plays.
 function AppRoutes() {
-  const { isLoading } = useAuth();
+  const { isLoading, isAuthenticated } = useAuth();
 
   // The splash shows once every time the app is opened (page load/refresh).
   const [splashDone, setSplashDone] = useState(false);
@@ -81,7 +77,19 @@ function AppRoutes() {
     return <div className="min-h-screen bg-background" />;
   }
 
-  // 3. Session known: Dashboard (valid session) or Auth (no session).
+  // 3. Session known: send the user to the right place immediately
+  //    so we do not bounce through a protected route just to redirect.
+    if (!isAuthenticated) {
+    return (
+      <Routes>
+        <Route path="/login" element={<AuthLayout />} />
+        <Route path="/register" element={<AuthLayout />} />
+        <Route path="/account-setup" element={<AccountCreationPage />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    );
+  }
+
   return (
     <Routes>
       {/* Public routes — logged-in users are sent to the Dashboard */}
@@ -223,7 +231,7 @@ function AppRoutes() {
         }
       />
 
-      {/* Default routes */}
+      {/* Default routes for authenticated users */}
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>

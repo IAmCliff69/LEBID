@@ -1,33 +1,24 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { z } from "zod";
+import { Eye, EyeOff, ArrowRight } from "lucide-react";
+import { motion, AnimatePresence, useReducedMotion } from "motion/react";
+
 
 import { login } from "@/api/auth";
-import { register as registerApi } from "@/api/auth";
 import { useAuth } from "@/context/AuthContext";
+import LebidLogo from "@/components/brand/LebidLogo";
 import ThemeToggle from "@/components/layout/ThemeToggle";
+import { cn } from "@/lib/utils";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(1, "Password is required"),
 });
 
-const registerSchema = z
-  .object({
-    name: z.string().min(2, "Name must be at least 2 characters"),
-    email: z.string().email("Please enter a valid email address"),
-    password: z.string().min(8, "Password must be at least 8 characters"),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
-  });
-
 type LoginFormData = z.infer<typeof loginSchema>;
-type RegisterFormData = z.infer<typeof registerSchema>;
 
 function getErrorMessage(error: unknown, fallback: string): string {
   if (typeof error === "object" && error !== null && "response" in error) {
@@ -35,59 +26,35 @@ function getErrorMessage(error: unknown, fallback: string): string {
       .response?.data?.detail;
     if (typeof detail === "string") return detail;
   }
-
   return fallback;
 }
 
-function LebidBrand() {
-  return (
-    <div className="mb-5 flex items-center gap-3">
-      <div
-        aria-hidden="true"
-        className="relative flex size-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm ring-1 ring-ring"
-      >
-        <span className="-mt-0.5 text-[26px] font-extrabold leading-none">L</span>
-        <span className="absolute bottom-2 left-3 h-1 w-3 rounded-full bg-secondary" />
-        <span className="absolute -right-1 -top-1 size-3 rounded-full border-2 border-primary-foreground bg-secondary" />
-      </div>
-      <div className="text-left">
-        <p className="text-lg font-bold leading-tight tracking-[0.01em] text-white drop-shadow-sm">
-          Lebid
-        </p>
-        <p className="mt-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-white/80">
-          Your academic companion
-        </p>
-      </div>
-    </div>
-  );
-}
+type AuthView = "default" | "name";
 
-export default function AuthPage({ initialMode }: { initialMode: "login" | "register" }) {
+const SLIDE = { duration: 0.7, ease: [0.4, 0, 0.2, 1] as const };
+
+const friendlyFont = { fontFamily: '"Original Surfer", cursive' };
+
+export default function AuthPage({
+  initialMode: _initialMode,
+}: {
+  initialMode: "login" | "register";
+}) {
   const navigate = useNavigate();
-  const location = useLocation();
   const { setUser } = useAuth();
-  const isSignUp =
-    location.pathname === "/register" ||
-    (location.pathname !== "/login" && initialMode === "register");
-  const [serverError, setServerError] = useState<{
-    pathname: string;
-    message: string;
-  } | null>(null);
-  const [passwordResetNotice, setPasswordResetNotice] = useState(false);
-  const visibleServerError =
-    serverError?.pathname === location.pathname ? serverError.message : null;
+  const prefersReducedMotion = useReducedMotion();
+  const motionSafe = !prefersReducedMotion;
+
+  const [authView, setAuthView] = useState<AuthView>("default");
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [collectedName, setCollectedName] = useState("");
+
+  const isName = authView === "name";
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   });
-  const registerForm = useForm<RegisterFormData>({
-    resolver: zodResolver(registerSchema),
-  });
-
-  const switchMode = (nextMode: boolean) => {
-    setServerError(null);
-    navigate(nextMode ? "/register" : "/login");
-  };
 
   const onLogin = async (data: LoginFormData) => {
     setServerError(null);
@@ -96,288 +63,373 @@ export default function AuthPage({ initialMode }: { initialMode: "login" | "regi
       setUser(user);
       navigate("/dashboard");
     } catch (error: unknown) {
-      setServerError({
-        pathname: location.pathname,
-        message: getErrorMessage(error, "Invalid email or password."),
-      });
+      setServerError(getErrorMessage(error, "Invalid email or password."));
     }
   };
 
-  const onRegister = async (data: RegisterFormData) => {
+  const handleGetStarted = () => {
     setServerError(null);
-    try {
-      await registerApi({
-        name: data.name,
-        email: data.email,
-        password: data.password,
-      });
-      const user = await login({ email: data.email, password: data.password });
-      setUser(user);
-      navigate("/dashboard");
-    } catch (error: unknown) {
-      setServerError({
-        pathname: location.pathname,
-        message: getErrorMessage(error, "Registration failed. Please try again."),
-      });
-    }
+    setAuthView("name");
   };
 
-  const inputClassName =
-    "my-1.5 w-full rounded-lg border border-input bg-card px-4 py-3 text-sm text-card-foreground outline-none transition placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/20";
-  const submitClassName =
-    "mt-3 rounded-full border border-primary bg-primary px-11 py-3 text-[13px] font-semibold uppercase tracking-wider text-primary-foreground shadow-sm transition hover:border-primary-hover hover:bg-primary-hover active:scale-95 disabled:cursor-wait disabled:opacity-70";
-  const authPanelStyle = {
-    backgroundImage: "url('/background.png')",
+  const handleBackToDefault = () => {
+    setAuthView("default");
   };
-  const serverErrorBlock = visibleServerError && (
-    <p role="alert" className="mt-2 w-full rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-left text-xs text-destructive">
-      {visibleServerError}
-    </p>
-  );
+
+    const handleNameContinue = () => {
+    const trimmed = collectedName.trim();
+    if (trimmed.length < 2) return;
+    navigate("/account-setup", { state: { name: trimmed } });
+  };
 
   return (
     <main
-      className="flex min-h-screen items-center justify-center bg-cover bg-center bg-no-repeat p-4 font-[Montserrat,sans-serif] text-foreground"
+      className="relative flex h-dvh max-h-dvh items-center justify-center overflow-hidden p-3 sm:p-5"
       style={{
         backgroundImage:
-          "linear-gradient(color-mix(in srgb, var(--primary) 36%, transparent), color-mix(in srgb, var(--primary) 36%, transparent)), url('/graduation-background.jpg')",
+          "linear-gradient(color-mix(in srgb, var(--primary) 40%, transparent), color-mix(in srgb, var(--primary) 40%, transparent)), url('/graduation-background.jpg')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
       }}
     >
-      <section className="relative min-h-135 w-full max-w- overflow-hidden rounded-2xl border border-border bg-card shadow-2xl sm:min-h-140">
-        <div
-          aria-hidden={!isSignUp}
-          inert={!isSignUp}
-          className={`absolute inset-0 z-10 flex h-full w-full items-center justify-center transition-all duration-600 ease-in-out sm:left-0 sm:w-1/2 ${
-            isSignUp
-              ? "translate-x-0 opacity-100 sm:z-50 sm:translate-x-full"
-              : "pointer-events-none translate-x-full opacity-0 sm:z-10 sm:translate-x-0"
-          }`}
-        >
-          <form
-            onSubmit={registerForm.handleSubmit(onRegister)}
-            className="flex h-full w-full flex-col items-center justify-center overflow-y-auto bg-cover bg-center bg-no-repeat px-7 py-8 text-center sm:px-10 md:px-12"
-            style={authPanelStyle}
-          >
-            <LebidBrand />
-            <h1 className="mb-2 text-[26px] font-bold text-white drop-shadow-sm sm:text-[28px]">
-              Create Account
-            </h1>
-            <p className="mb-3 text-[13px] text-white drop-shadow-sm">
-              Use your email to get started
-            </p>
-
-            <input
-              type="text"
-              autoComplete="name"
-              placeholder="Name"
-              aria-label="Name"
-              className={inputClassName}
-              {...registerForm.register("name")}
-            />
-            {registerForm.formState.errors.name && (
-              <p className="w-full text-left text-xs text-destructive">
-                {registerForm.formState.errors.name.message}
-              </p>
-            )}
-
-            <input
-              type="email"
-              autoComplete="email"
-              placeholder="Email"
-              aria-label="Email"
-              className={inputClassName}
-              {...registerForm.register("email")}
-            />
-            {registerForm.formState.errors.email && (
-              <p className="w-full text-left text-xs text-destructive">
-                {registerForm.formState.errors.email.message}
-              </p>
-            )}
-
-            <input
-              type="password"
-              autoComplete="new-password"
-              placeholder="Password"
-              aria-label="Password"
-              className={inputClassName}
-              {...registerForm.register("password")}
-            />
-            {registerForm.formState.errors.password && (
-              <p className="w-full text-left text-xs text-destructive">
-                {registerForm.formState.errors.password.message}
-              </p>
-            )}
-
-            <input
-              type="password"
-              autoComplete="new-password"
-              placeholder="Confirm password"
-              aria-label="Confirm password"
-              className={inputClassName}
-              {...registerForm.register("confirmPassword")}
-            />
-            {registerForm.formState.errors.confirmPassword && (
-              <p className="w-full text-left text-xs text-destructive">
-                {registerForm.formState.errors.confirmPassword.message}
-              </p>
-            )}
-
-            {serverErrorBlock}
-
-            <button
-              type="submit"
-              disabled={registerForm.formState.isSubmitting}
-              className={submitClassName}
-            >
-              {registerForm.formState.isSubmitting ? "Creating account..." : "Sign Up"}
-            </button>
-              <p className="mt-5 text-sm text-white/90 sm:hidden">
-              Already have an account?{" "}
-              <button
-                type="button"
-                onClick={() => switchMode(false)}
-                className="font-semibold text-primary underline underline-offset-2"
-              >
-                Sign in
-              </button>
-            </p>
-          </form>
-        </div>
-
-        <div
-          aria-hidden={isSignUp}
-          inert={isSignUp}
-          className={`absolute inset-0 z-20 flex h-full w-full items-center justify-center transition-all duration-600 ease-in-out sm:left-0 sm:w-1/2 ${
-            isSignUp
-              ? "pointer-events-none -translate-x-full opacity-0 sm:z-10 sm:translate-x-full"
-              : "translate-x-0 opacity-100 sm:z-20 sm:translate-x-0"
-          }`}
-        >
-          <form
-            onSubmit={loginForm.handleSubmit(onLogin)}
-            className="flex h-full w-full flex-col items-center justify-center overflow-y-auto bg-cover bg-center bg-no-repeat px-7 py-8 text-center sm:px-10 md:px-12"
-            style={authPanelStyle}
-          >
-            <LebidBrand />
-            <h1 className="mb-2 text-[26px] font-bold text-white drop-shadow-sm sm:text-[28px]">
-              Sign in
-            </h1>
-            <p className="mb-3 text-[13px] text-white drop-shadow-sm">
-              Use your account to continue
-            </p>
-
-            <input
-              type="email"
-              autoComplete="email"
-              placeholder="Email"
-              aria-label="Email"
-              className={inputClassName}
-              {...loginForm.register("email")}
-            />
-            {loginForm.formState.errors.email && (
-              <p className="w-full text-left text-xs text-destructive">
-                {loginForm.formState.errors.email.message}
-              </p>
-            )}
-
-            <input
-              type="password"
-              autoComplete="current-password"
-              placeholder="Password"
-              aria-label="Password"
-              className={inputClassName}
-              {...loginForm.register("password")}
-            />
-            {loginForm.formState.errors.password && (
-              <p className="w-full text-left text-xs text-destructive">
-                {loginForm.formState.errors.password.message}
-              </p>
-            )}
-
-            <button
-              type="button"
-              onClick={() => setPasswordResetNotice(true)}
-              className="my-2 text-[13px] text-white/90 transition hover:text-primary"
-            >
-              Forgot your password?
-            </button>
-
-            {passwordResetNotice && (
-              <p role="status" className="w-full text-left text-xs text-white">
-                Password reset is not available yet. Contact your administrator.
-              </p>
-            )}
-
-            {serverErrorBlock}
-
-            <button
-              type="submit"
-              disabled={loginForm.formState.isSubmitting}
-              className={submitClassName}
-            >
-              {loginForm.formState.isSubmitting ? "Signing in..." : "Sign In"}
-            </button>
-              <p className="mt-5 text-sm text-white/90 sm:hidden">
-              Don&apos;t have an account?{" "}
-              <button
-                type="button"
-                onClick={() => switchMode(true)}
-                className="font-semibold text-primary underline underline-offset-2"
-              >
-                Sign up
-              </button>
-            </p>
-          </form>
-        </div>
-
-        <div
-          className={`absolute left-1/2 top-0 z-100 hidden h-full w-1/2 overflow-hidden transition-transform duration-600 ease-in-out sm:block ${
-            isSignUp ? "-translate-x-full" : "translate-x-0"
-          }`}
+      {/* Card fills available height, never overflows viewport */}
+      <div className="relative h-full max-h-[640px] w-full max-w-5xl overflow-hidden rounded-2xl border border-border shadow-2xl">
+        {/* ════════════════════════════════════════
+            GIRL PANEL — slides left ↔ right
+            ════════════════════════════════════════ */}
+        <motion.div
+          className="absolute top-0 h-full w-full sm:w-1/2"
+          style={{
+            backgroundImage: "url('/background.png')",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
+          initial={false}
+          animate={{ left: isName ? "50%" : "0%" }}
+          transition={motionSafe ? SLIDE : { duration: 0 }}
         >
           <div
-            className={`relative -left-full h-full w-[200%] bg-linear-to-br from-primary to-primary-hover text-primary-foreground transition-transform duration-600 ease-in-out ${
-              isSignUp ? "translate-x-1/2" : "translate-x-0"
-            }`}
-          >
-            <div
-              className={`absolute top-0 flex h-full w-1/2 flex-col items-center justify-center px-7 text-center transition-transform duration-600 ease-in-out md:px-10 ${
-                isSignUp ? "translate-x-0" : "translate-x-[20%]"
-              }`}
-            >
-              <h2 className="mb-4 text-[28px] font-bold">Welcome Back!</h2>
-              <p className="mb-8 max-w-70 text-sm leading-relaxed">
-                To keep connected with us, please log in with your personal info.
-              </p>
-              <button
-                type="button"
-                onClick={() => switchMode(false)}
-                className="rounded-full border border-primary-foreground/50 bg-white/5 px-11 py-3 text-[13px] font-semibold uppercase tracking-wider text-primary-foreground transition hover:border-primary-foreground hover:bg-white/10 active:scale-95"
-              >
-                Sign In
-              </button>
-            </div>
+            aria-hidden
+            className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/15 to-black/5"
+          />
 
-            <div
-              className={`absolute right-0 top-0 flex h-full w-1/2 flex-col items-center justify-center px-7 text-center transition-transform duration-600 ease-in-out md:px-10 ${
-                isSignUp ? "translate-x-[20%]" : "translate-x-0"
-              }`}
-            >
-              <h2 className="mb-4 text-[28px] font-bold">Hello, Friend!</h2>
-              <p className="mb-8 max-w-70 text-sm leading-relaxed">
-                Enter your personal details and start your journey with us.
-              </p>
-              <button
-                type="button"
-                onClick={() => switchMode(true)}
-                className="rounded-full border border-primary-foreground/50 bg-white/5 px-11 py-3 text-[13px] font-semibold uppercase tracking-wider text-primary-foreground transition hover:border-primary-foreground hover:bg-white/10 active:scale-95"
-              >
-                Sign Up
-              </button>
-            </div>
+          <div className="relative z-10 flex h-full flex-col px-5 py-5 sm:px-8 sm:py-6 md:px-10">
+            <AnimatePresence mode="wait">
+              {!isName ? (
+                <motion.div
+                  key="girl-signin"
+                  initial={motionSafe ? { opacity: 0, y: 12 } : false}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={motionSafe ? { opacity: 0, y: -12 } : undefined}
+                  transition={{ duration: 0.35 }}
+                  className="flex h-full flex-col"
+                >
+                  {/* Small logo — top-left */}
+                  <motion.div
+                    layoutId="side-logo-left"
+                    transition={SLIDE}
+                    className="w-14 shrink-0 sm:w-16"
+                  >
+                    <LebidLogo className="w-full drop-shadow-md" />
+                  </motion.div>
+
+                  {/* Centered content */}
+                  <div className="flex min-h-0 flex-1 flex-col items-center justify-center">
+                    <motion.div
+                      layoutId="main-logo"
+                      transition={SLIDE}
+                      className="mb-3 w-32 sm:mb-4 sm:w-40"
+                    >
+                      <LebidLogo className="w-full drop-shadow-md" />
+                    </motion.div>
+
+                    <p
+                      className="mb-0.5 text-sm font-semibold uppercase tracking-[0.18em] text-white/90 drop-shadow sm:text-base"
+                      style={friendlyFont}
+                    >
+                      Sign In
+                    </p>
+                    <h1
+                      className="mb-1 text-center text-3xl font-bold tracking-tight text-white drop-shadow-md sm:text-4xl"
+                      style={friendlyFont}
+                    >
+                      Welcome back!
+                    </h1>
+                    <p className="mb-5 text-center text-base text-white/90 drop-shadow sm:mb-6 sm:text-lg">
+                      Your planner is waiting.
+                    </p>
+
+                    <form
+                      onSubmit={loginForm.handleSubmit(onLogin)}
+                      className="flex w-full max-w-sm flex-col gap-3"
+                      noValidate
+                    >
+                      <div>
+                        <label
+                          htmlFor="auth-email"
+                          className="mb-1 block text-sm font-medium text-white drop-shadow"
+                        >
+                          Email
+                        </label>
+                        <input
+                          id="auth-email"
+                          type="email"
+                          autoComplete="email"
+                          placeholder="you@example.com"
+                          aria-invalid={!!loginForm.formState.errors.email}
+                          className={cn(
+                            "w-full rounded-lg border border-white/40 bg-white/90 px-3.5 py-2.5 text-sm text-foreground outline-none transition",
+                            "placeholder:text-muted-foreground",
+                            "focus:border-white focus:ring-2 focus:ring-white/40",
+                            loginForm.formState.errors.email &&
+                              "border-destructive focus:border-destructive"
+                          )}
+                          {...loginForm.register("email")}
+                        />
+                        {loginForm.formState.errors.email && (
+                          <p className="mt-1 text-xs text-red-200" role="alert">
+                            {loginForm.formState.errors.email.message}
+                          </p>
+                        )}
+                      </div>
+
+                      <div>
+                        <div className="mb-1 flex items-center justify-between">
+                          <label
+                            htmlFor="auth-password"
+                            className="block text-sm font-medium text-white drop-shadow"
+                          >
+                            Password
+                          </label>
+                          <button
+                            type="button"
+                            className="text-xs font-medium text-white/90 underline-offset-2 hover:underline"
+                            onClick={() =>
+                              alert("Forgot password flow will be added later.")
+                            }
+                          >
+                            Forgot password?
+                          </button>
+                        </div>
+                        <div className="relative">
+                          <input
+                            id="auth-password"
+                            type={showPassword ? "text" : "password"}
+                            autoComplete="current-password"
+                            placeholder="••••••••"
+                            aria-invalid={!!loginForm.formState.errors.password}
+                            className={cn(
+                              "w-full rounded-lg border border-white/40 bg-white/90 px-3.5 py-2.5 pr-10 text-sm text-foreground outline-none transition",
+                              "placeholder:text-muted-foreground",
+                              "focus:border-white focus:ring-2 focus:ring-white/40",
+                              loginForm.formState.errors.password &&
+                                "border-destructive focus:border-destructive"
+                            )}
+                            {...loginForm.register("password")}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword((v) => !v)}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-foreground"
+                            aria-label={
+                              showPassword ? "Hide password" : "Show password"
+                            }
+                          >
+                            {showPassword ? (
+                              <EyeOff className="size-4" />
+                            ) : (
+                              <Eye className="size-4" />
+                            )}
+                          </button>
+                        </div>
+                        {loginForm.formState.errors.password && (
+                          <p className="mt-1 text-xs text-red-200" role="alert">
+                            {loginForm.formState.errors.password.message}
+                          </p>
+                        )}
+                      </div>
+
+                      {serverError && (
+                        <p
+                          role="alert"
+                          className="rounded-lg border border-red-300/40 bg-red-500/20 px-3 py-2 text-xs text-white"
+                        >
+                          {serverError}
+                        </p>
+                      )}
+
+                      <button
+                        type="submit"
+                        disabled={loginForm.formState.isSubmitting}
+                        className={cn(
+                          "mt-0.5 flex h-11 w-full items-center justify-center rounded-full bg-primary text-sm font-semibold uppercase tracking-wider text-primary-foreground shadow-md transition",
+                          "hover:bg-primary-hover active:scale-[0.98]",
+                          "disabled:cursor-wait disabled:opacity-70"
+                        )}
+                      >
+                        {loginForm.formState.isSubmitting
+                          ? "Signing in…"
+                          : "Sign In"}
+                      </button>
+                    </form>
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="girl-name"
+                  initial={motionSafe ? { opacity: 0, y: 12 } : false}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={motionSafe ? { opacity: 0, y: -12 } : undefined}
+                  transition={{ duration: 0.35, delay: 0.15 }}
+                  className="flex h-full flex-col items-center justify-center text-center"
+                >
+                  <motion.div
+                    layoutId="main-logo"
+                    transition={SLIDE}
+                    className="mb-5 w-36 sm:w-48"
+                  >
+                    <LebidLogo className="w-full drop-shadow-md brightness-0 invert" />
+                  </motion.div>
+
+                  <h2
+                    className="mb-6 text-3xl font-bold tracking-tight text-white drop-shadow-md sm:text-4xl"
+                    style={friendlyFont}
+                  >
+                    Hey! What should I call you? 👋
+                  </h2>
+
+                  <div className="flex w-full max-w-xs flex-col gap-4">
+                    <input
+                      type="text"
+                      autoComplete="name"
+                      placeholder="Enter your name"
+                      value={collectedName}
+                      onChange={(e) => setCollectedName(e.target.value)}
+                      className={cn(
+                        "w-full rounded-lg border border-white/40 bg-white/90 px-3.5 py-2.5 text-sm text-foreground outline-none transition",
+                        "placeholder:text-muted-foreground",
+                        "focus:border-white focus:ring-2 focus:ring-white/40"
+                      )}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleNameContinue}
+                      disabled={collectedName.trim().length < 2}
+                      className={cn(
+                        "flex h-11 items-center justify-center gap-2 rounded-full bg-white text-sm font-semibold uppercase tracking-wider text-primary shadow-md transition",
+                        "hover:bg-white/90 active:scale-[0.98]",
+                        "disabled:cursor-not-allowed disabled:opacity-50"
+                      )}
+                    >
+                      Continue
+                      <ArrowRight className="size-4" />
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
-        </div>
-      </section>
+        </motion.div>
+
+        {/* ════════════════════════════════════════
+            SOLID PANEL — slides right ↔ left
+            ════════════════════════════════════════ */}
+        <motion.div
+          className="absolute top-0 h-full w-full bg-primary sm:w-1/2"
+          initial={false}
+          animate={{ left: isName ? "0%" : "50%" }}
+          transition={motionSafe ? SLIDE : { duration: 0 }}
+        >
+          <div className="relative z-10 flex h-full flex-col px-5 py-5 sm:px-8 sm:py-6 md:px-10">
+            <AnimatePresence mode="wait">
+              {!isName ? (
+                <motion.div
+                  key="solid-getstarted"
+                  initial={motionSafe ? { opacity: 0, y: 12 } : false}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={motionSafe ? { opacity: 0, y: -12 } : undefined}
+                  transition={{ duration: 0.35 }}
+                  className="flex h-full flex-col text-primary-foreground"
+                >
+                  {/* Small logo — top-right */}
+                  <motion.div
+                    layoutId="side-logo-right"
+                    transition={SLIDE}
+                    className="ml-auto w-14 shrink-0 sm:w-16"
+                  >
+                    <LebidLogo className="w-full brightness-0 invert" />
+                  </motion.div>
+
+                  <div className="flex min-h-0 flex-1 flex-col items-center justify-center text-center">
+                    <h2
+                      className="mb-3 text-3xl font-bold tracking-tight sm:text-4xl"
+                      style={friendlyFont}
+                    >
+                      Hey there! 👋
+                    </h2>
+                    <p className="mb-8 max-w-[260px] text-base leading-relaxed text-primary-foreground/90 sm:text-lg">
+                      Ready to make planning a little easier?
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={handleGetStarted}
+                      className={cn(
+                        "flex h-12 items-center gap-2 rounded-full border-2 border-primary-foreground/60 bg-transparent px-8 text-sm font-semibold uppercase tracking-wider text-primary-foreground transition",
+                        "hover:border-primary-foreground hover:bg-primary-foreground/10 active:scale-[0.98]"
+                      )}
+                    >
+                      Get Started
+                      <ArrowRight className="size-4" />
+                    </button>
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="solid-welcome"
+                  initial={motionSafe ? { opacity: 0, y: 12 } : false}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={motionSafe ? { opacity: 0, y: -12 } : undefined}
+                  transition={{ duration: 0.35, delay: 0.15 }}
+                  className="flex h-full flex-col text-primary-foreground"
+                >
+                  {/* Small logo — top-left */}
+                  <motion.div
+                    layoutId="side-logo-left"
+                    transition={SLIDE}
+                    className="w-14 shrink-0 sm:w-16"
+                  >
+                    <LebidLogo className="w-full brightness-0 invert" />
+                  </motion.div>
+
+                  <div className="flex min-h-0 flex-1 flex-col justify-center">
+                    <h1
+                      className="mb-1 text-3xl font-bold tracking-tight sm:text-4xl"
+                      style={friendlyFont}
+                    >
+                      Welcome back!
+                    </h1>
+                    <p className="mb-8 max-w-[260px] text-base text-primary-foreground/85 sm:text-lg">
+                      Please login to access your planner space
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleBackToDefault}
+                      className={cn(
+                        "flex h-11 w-full max-w-xs items-center justify-center rounded-full border-2 border-primary-foreground/60 bg-transparent text-sm font-semibold uppercase tracking-wider text-primary-foreground transition",
+                        "hover:border-primary-foreground hover:bg-primary-foreground/10 active:scale-[0.98]"
+                      )}
+                    >
+                      Sign In
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </motion.div>
+      </div>
+
       <ThemeToggle />
     </main>
   );

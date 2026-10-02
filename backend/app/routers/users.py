@@ -6,6 +6,8 @@ from app.models.user import User
 from app.schemas.auth import UserResponse, MessageResponse
 from app.schemas.user import UpdateProfileRequest, ChangePasswordRequest
 from app.utils.security import verify_password, hash_password
+from app.schemas.auth import GeminiKeyRequest, GeminiKeyResponse, MessageResponse
+from app.services.gemini import validate_gemini_api_key
 
 router = APIRouter()
 
@@ -84,3 +86,29 @@ def change_password(
     db.commit()
 
     return {"message": "Password changed successfully."}
+
+@router.post("/me/gemini-key", response_model=GeminiKeyResponse)
+def set_gemini_api_key(
+    payload: GeminiKeyRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Saves the student's personal Gemini API key after a quick validation check.
+    The raw key is never returned in responses.
+    """
+    key = payload.api_key.strip()
+
+    if not validate_gemini_api_key(key):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="That Gemini API key could not be validated. Check the key and try again.",
+        )
+
+    current_user.gemini_api_key = key
+    db.commit()
+
+    return {
+        "message": "Gemini API key saved successfully.",
+        "has_gemini_api_key": True,
+    }

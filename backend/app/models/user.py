@@ -31,6 +31,13 @@ class User(Base):
     level: Mapped[str | None] = mapped_column(String(50), nullable=True)
     semester: Mapped[str | None] = mapped_column(String(50), nullable=True)
     academic_year: Mapped[str | None] = mapped_column(String(50), nullable=True)
+        # Per-user Google Gemini API key (never returned in API responses)
+    gemini_api_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    @property
+    def has_gemini_api_key(self) -> bool:
+        """True if this user has stored a Gemini API key. Never exposes the key itself."""
+        return bool(self.gemini_api_key)
 
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 

@@ -24,6 +24,7 @@ class UserResponse(BaseModel):
     semester: str | None
     academic_year: str | None
     is_active: bool
+    has_gemini_api_key: bool = False   # ← add this
 
     model_config = {"from_attributes": True}
 
@@ -31,3 +32,12 @@ class UserResponse(BaseModel):
 class MessageResponse(BaseModel):
     """Generic message response for simple confirmations."""
     message: str
+
+class GeminiKeyRequest(BaseModel):
+    """Student's personal Google Gemini API key."""
+    api_key: str = Field(..., min_length=20, max_length=255)
+
+
+class GeminiKeyResponse(BaseModel):
+    message: str
+    has_gemini_api_key: bool    

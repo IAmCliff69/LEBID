@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import LebidLogo from "@/components/brand/LebidLogo";
 
 const navItems = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
@@ -34,17 +35,20 @@ export default function Sidebar() {
     <aside className="sticky top-0 flex h-screen w-18 shrink-0 flex-col bg-sidebar">
       {/* Brand */}
       <div className="flex h-14 shrink-0 items-center justify-center">
-        <div
-          className="flex size-9 items-center justify-center rounded-xl bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
-          aria-label="Lebid"
+        <NavLink
+          to="/dashboard"
+          aria-label="Lebid Dashboard"
           title="Lebid"
+          className="flex items-center justify-center"
         >
-          <span className="text-sm font-bold">L</span>
-        </div>
+          <LebidLogo
+            className="h-12 w-auto max-w-12 object-contain"
+            alt="Lebid"
+          />
+        </NavLink>
       </div>
 
-      {/* Navigation — flex column that fills all available space and
-          distributes items evenly so nothing is ever clipped */}
+      {/* Navigation */}
       <nav
         aria-label="Main navigation"
         className="flex flex-1 flex-col px-2 py-3"
@@ -57,7 +61,6 @@ export default function Sidebar() {
             aria-label={item.label}
             className={({ isActive }) =>
               cn(
-                // Each item stretches to fill its equal share of the nav height
                 "group flex flex-1 w-full items-center justify-center rounded-xl",
                 "transition-all duration-200 min-h-0",
                 "focus-visible:outline-2 focus-visible:outline-offset-2",
@@ -83,7 +86,7 @@ export default function Sidebar() {
           </NavLink>
         ))}
       </nav>
-
     </aside>
   );
 }
+

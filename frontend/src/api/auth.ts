@@ -25,6 +25,7 @@ export interface User {
   semester: string | null;
   academic_year: string | null;
   is_active: boolean;
+  has_gemini_api_key?: boolean;
 }
 
 // =========================================================

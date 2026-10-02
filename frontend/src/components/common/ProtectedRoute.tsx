@@ -8,14 +8,10 @@ interface ProtectedRouteProps {
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading } = useAuth();
 
-  // While we're checking if a session exists, show nothing.
-  // This prevents a brief flash of the login page on refresh.
+  // While we're checking if a session exists, show a blank background.
+  // (After the splash this almost never appears, but keeps the UI consistent.)
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground text-sm">Loading...</p>
-      </div>
-    );
+    return <div className="min-h-screen bg-background" />;
   }
 
   // Not logged in — redirect to login

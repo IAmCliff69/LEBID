@@ -5,7 +5,8 @@ import google.generativeai as genai
 
 from app.config import settings
 
-genai.configure(api_key=settings.gemini_api_key)
+# Do NOT configure a global API key here.
+# Each call uses the current user's personal Gemini API key.
 
 
 SYSTEM_PROMPT = """
@@ -62,29 +63,26 @@ Always return valid JSON. Never include text outside the JSON structure.
 def get_ai_response(
     student_message: str,
     context: dict[str, Any],
+    api_key: str,
     conversation_history: list[dict] | None = None,
 ) -> dict[str, Any]:
     """
     Sends the student's message and their full academic context to Gemini
     and returns structured planning recommendations.
-
-    Args:
-        student_message: what the student asked or said
-        context: the student's full academic context from build_student_context
-        conversation_history: previous messages in this conversation (optional)
-
-    Returns:
-        A dictionary containing:
-        - message: the AI's conversational response
-        - recommendations: list of specific recommendations
-        - insights: list of observations about the student's situation
     """
+    if not api_key or not api_key.strip():
+        raise ValueError(
+            "No Gemini API key configured for this user. "
+            "Please add your key during onboarding or in settings."
+        )
+
+    genai.configure(api_key=api_key.strip())
+
     model = genai.GenerativeModel(
         model_name=settings.gemini_model,
         system_instruction=SYSTEM_PROMPT,
     )
 
-    # Build the full prompt with context
     context_block = f"""
 STUDENT ACADEMIC CONTEXT:
 {json.dumps(context, indent=2)}
@@ -93,7 +91,6 @@ STUDENT MESSAGE:
 {student_message}
 """
 
-    # Build conversation history if provided
     messages = []
     if conversation_history:
         for msg in conversation_history:
@@ -110,7 +107,6 @@ STUDENT MESSAGE:
     response = model.generate_content(messages)
     response_text = response.text.strip()
 
-    # Strip markdown fences if present
     if response_text.startswith("```"):
         lines = response_text.split("\n")
         response_text = "\n".join(lines[1:-1])
@@ -118,7 +114,6 @@ STUDENT MESSAGE:
     try:
         result = json.loads(response_text)
     except json.JSONDecodeError:
-        # If JSON parsing fails, return a safe fallback
         result = {
             "message": response_text,
             "recommendations": [],
