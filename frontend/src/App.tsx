@@ -26,6 +26,8 @@ import TimetableImportPage from "@/pages/timetable/TimetableImportPage";
 import ConflictCheckerPage from "@/pages/conflicts/ConflictCheckerPage";
 import AccountCreationPage from "@/pages/auth/AccountCreationPage";
 import GeminiSetupPage from "@/pages/onboarding/GeminiSetupPage";
+import AcademicInformationPage from "@/pages/onboarding/AcademicInformationPage";
+import TimetableUploadPage from "@/pages/onboarding/TimetableUploadPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -110,7 +112,9 @@ function AppRoutes() {
         path="/account-setup"
         element={<Navigate to="/onboarding/gemini" replace />}
       />
-      <Route path="/onboarding/gemini" element={<GeminiSetupPage />} />
+     <Route path="/onboarding/gemini" element={<GeminiSetupPage />} />
+      <Route path="/onboarding/academic" element={<AcademicInformationPage />} />
+      <Route path="/onboarding/timetable" element={<TimetableUploadPage />} />
 
       {/* Protected routes */}
       <Route

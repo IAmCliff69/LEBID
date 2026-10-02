@@ -94,12 +94,14 @@ export default function GeminiSetupPage() {
   // After the success state shows for a moment, move on.
   // TODO: when the Academic Information page exists, go there instead.
   useEffect(() => {
-    if (!verified) return;
-    const timer = window.setTimeout(() => {
-      navigate("/dashboard", { replace: true });
-    }, 900);
-    return () => window.clearTimeout(timer);
-  }, [verified, navigate]);
+  if (!verified) return;
+
+  const timer = window.setTimeout(() => {
+    navigate("/onboarding/academic", { replace: true });
+  }, 900);
+
+  return () => window.clearTimeout(timer);
+}, [verified, navigate]);
 
   const isSubmitting = form.formState.isSubmitting;
   const keyError = form.formState.errors.apiKey;
