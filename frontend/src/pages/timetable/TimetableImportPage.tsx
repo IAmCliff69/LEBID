@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Upload, FileImage, Pencil, Trash2, CheckCircle, AlertTriangle, ChevronDown } from "lucide-react";
+import { Upload, Pencil, Trash2, CheckCircle, AlertTriangle, ChevronDown } from "lucide-react";
 
 import { uploadTimetable, confirmImport } from "@/api/timetableImport";
 import type { ExtractedEntry, ConfirmEntryRequest } from "@/api/timetableImport";
