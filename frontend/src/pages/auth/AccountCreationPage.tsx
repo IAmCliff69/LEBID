@@ -65,8 +65,8 @@ export default function AccountCreationPage() {
         password: data.password,
       });
       setUser(user);
-      // Next phase will go to Gemini API setup instead of Dashboard
-      navigate("/dashboard");
+      // Next step of onboarding: Gemini API key setup
+      navigate("/onboarding/gemini", { replace: true });
     } catch (error: unknown) {
       setServerError(
         getErrorMessage(error, "Registration failed. Please try again.")

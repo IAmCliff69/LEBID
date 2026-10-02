@@ -78,6 +78,13 @@ async def upload_timetable(
             detail="The uploaded file is empty.",
         )
 
+    # Each student uses their own Gemini key (one user -> one key)
+    if not current_user.gemini_api_key:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Please add your Gemini API key before importing a timetable.",
+        )
+
     # Create an import session record
     import_session = TimetableImport(
         user_id=current_user.id,
@@ -91,9 +98,11 @@ async def upload_timetable(
     # Send to Gemini for extraction
     try:
         if content_type == ALLOWED_PDF_TYPE:
-            extracted = extract_timetable_from_pdf(file_bytes)
+            extracted = extract_timetable_from_pdf(file_bytes, current_user.gemini_api_key)
         else:
-            extracted = extract_timetable_from_image(file_bytes, content_type)
+            extracted = extract_timetable_from_image(
+                file_bytes, content_type, current_user.gemini_api_key
+            )
 
         # Store the extracted data in the session
         import_session.extracted_data = json.dumps(extracted)

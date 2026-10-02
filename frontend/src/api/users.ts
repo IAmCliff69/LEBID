@@ -52,3 +52,25 @@ export const changePassword = async (
 
   return response.data;
 };
+
+// =========================================================
+// GEMINI API KEY
+// =========================================================
+
+export interface GeminiKeyResponse {
+  message: string;
+  has_gemini_api_key: boolean;
+}
+
+// Sends the student's own Gemini API key to the backend.
+// The backend checks it with Google and only saves it if it works.
+// The key is never returned by the API and never stored in the browser.
+export const saveGeminiKey = async (
+  apiKey: string
+): Promise<GeminiKeyResponse> => {
+  const response = await apiClient.post("/users/me/gemini-key", {
+    api_key: apiKey,
+  });
+
+  return response.data;
+};

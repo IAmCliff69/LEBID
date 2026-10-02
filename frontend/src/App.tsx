@@ -25,6 +25,7 @@ import AiAssistantPage from "@/pages/ai/AiAssistantPage";
 import TimetableImportPage from "@/pages/timetable/TimetableImportPage";
 import ConflictCheckerPage from "@/pages/conflicts/ConflictCheckerPage";
 import AccountCreationPage from "@/pages/auth/AccountCreationPage";
+import GeminiSetupPage from "@/pages/onboarding/GeminiSetupPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -79,7 +80,7 @@ function AppRoutes() {
 
   // 3. Session known: send the user to the right place immediately
   //    so we do not bounce through a protected route just to redirect.
-    if (!isAuthenticated) {
+  if (!isAuthenticated) {
     return (
       <Routes>
         <Route path="/login" element={<AuthLayout />} />
@@ -103,6 +104,13 @@ function AppRoutes() {
         <Route path="/login" element={<></>} />
         <Route path="/register" element={<></>} />
       </Route>
+
+      {/* Onboarding (logged in, but no sidebar/top bar) */}
+      <Route
+        path="/account-setup"
+        element={<Navigate to="/onboarding/gemini" replace />}
+      />
+      <Route path="/onboarding/gemini" element={<GeminiSetupPage />} />
 
       {/* Protected routes */}
       <Route

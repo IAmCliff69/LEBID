@@ -1,12 +1,9 @@
 import json
 from typing import Any
 
-import google.generativeai as genai
+from app.services.gemini import generate_text
 
-from app.config import settings
-
-# Do NOT configure a global API key here.
-# Each call uses the current user's personal Gemini API key.
+# No global API key here. Each call uses the current user's personal Gemini key.
 
 
 SYSTEM_PROMPT = """
@@ -68,21 +65,8 @@ def get_ai_response(
 ) -> dict[str, Any]:
     """
     Sends the student's message and their full academic context to Gemini
-    and returns structured planning recommendations.
+    (using THEIR key) and returns structured planning recommendations.
     """
-    if not api_key or not api_key.strip():
-        raise ValueError(
-            "No Gemini API key configured for this user. "
-            "Please add your key during onboarding or in settings."
-        )
-
-    genai.configure(api_key=api_key.strip())
-
-    model = genai.GenerativeModel(
-        model_name=settings.gemini_model,
-        system_instruction=SYSTEM_PROMPT,
-    )
-
     context_block = f"""
 STUDENT ACADEMIC CONTEXT:
 {json.dumps(context, indent=2)}
@@ -91,21 +75,26 @@ STUDENT MESSAGE:
 {student_message}
 """
 
+    # Earlier messages first, then the new message with the context attached.
     messages = []
     if conversation_history:
         for msg in conversation_history:
             messages.append({
                 "role": msg["role"],
-                "parts": [msg["content"]],
+                "parts": [{"text": msg["content"]}],
             })
 
     messages.append({
         "role": "user",
-        "parts": [context_block],
+        "parts": [{"text": context_block}],
     })
 
-    response = model.generate_content(messages)
-    response_text = response.text.strip()
+    response_text = generate_text(
+        api_key,
+        contents=messages,
+        system_instruction=SYSTEM_PROMPT,
+        expect_json=True,
+    ).strip()
 
     if response_text.startswith("```"):
         lines = response_text.split("\n")

@@ -93,7 +93,7 @@ export default function AuthPage({
       }}
     >
       {/* Card fills available height, never overflows viewport */}
-      <div className="relative h-full max-h-[640px] w-full max-w-5xl overflow-hidden rounded-2xl border border-border shadow-2xl">
+      <div className="relative h-full max-h-640px w-full max-w-5xl overflow-hidden rounded-2xl border border-border shadow-2xl">
         {/* ════════════════════════════════════════
             GIRL PANEL — slides left ↔ right
             ════════════════════════════════════════ */}
@@ -110,7 +110,7 @@ export default function AuthPage({
         >
           <div
             aria-hidden
-            className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/15 to-black/5"
+            className="absolute inset-0 bg-linear-to-t from-black/40 via-black/15 to-black/5"
           />
 
           <div className="relative z-10 flex h-full flex-col px-5 py-5 sm:px-8 sm:py-6 md:px-10">
@@ -367,7 +367,7 @@ export default function AuthPage({
                     >
                       Hey there! 👋
                     </h2>
-                    <p className="mb-8 max-w-[260px] text-base leading-relaxed text-primary-foreground/90 sm:text-lg">
+                    <p className="mb-8 max-w-65 text-base leading-relaxed text-primary-foreground/90 sm:text-lg">
                       Ready to make planning a little easier?
                     </p>
 
@@ -409,7 +409,7 @@ export default function AuthPage({
                     >
                       Welcome back!
                     </h1>
-                    <p className="mb-8 max-w-[260px] text-base text-primary-foreground/85 sm:text-lg">
+                    <p className="mb-8 max-w-65 text-base text-primary-foreground/85 sm:text-lg">
                       Please login to access your planner space
                     </p>
                     <button
