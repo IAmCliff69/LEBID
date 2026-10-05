@@ -136,9 +136,8 @@ export default function GeminiSetupPage() {
             Let&apos;s power up Lebid&apos;s AI ✨
           </h1>
           <p className="mb-5 text-sm text-muted-foreground">
-            Lebid uses Google Gemini to understand your timetable and help
-            create smarter academic plans. It takes about a minute to get your
-            free key:
+            I will use your timetable and help
+            create smarter academic plans:
           </p>
 
           <ol className="mb-5 flex flex-col gap-2.5">

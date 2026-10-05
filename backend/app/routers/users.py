@@ -7,7 +7,12 @@ from app.schemas.auth import UserResponse, MessageResponse
 from app.schemas.user import UpdateProfileRequest, ChangePasswordRequest
 from app.utils.security import verify_password, hash_password
 from app.schemas.auth import GeminiKeyRequest, GeminiKeyResponse, MessageResponse
-from app.services.gemini import validate_gemini_api_key
+from app.services.gemini import GeminiUnreachableError, validate_gemini_api_key
+from app.models.study_preferences import StudyPreferences
+from app.schemas.study_preferences import (
+    StudyPreferencesRequest,
+    StudyPreferencesResponse,
+)
 
 router = APIRouter()
 
@@ -99,10 +104,18 @@ def set_gemini_api_key(
     """
     key = payload.api_key.strip()
 
-    if not validate_gemini_api_key(key):
+    try:
+        key_is_valid = validate_gemini_api_key(key)
+    except GeminiUnreachableError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="We couldn't reach Google to check your key. Please check your internet connection and try again.",
+        )
+
+    if not key_is_valid:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="That Gemini API key could not be validated. Check the key and try again.",
+            detail="Google did not accept that API key. Copy the whole key again from Google AI Studio and try again.",
         )
 
     current_user.gemini_api_key = key
@@ -112,3 +125,77 @@ def set_gemini_api_key(
         "message": "Gemini API key saved successfully.",
         "has_gemini_api_key": True,
     }
+
+@router.get("/me/study-preferences", response_model=StudyPreferencesResponse | None)
+def get_study_preferences(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns the student's saved study preferences,
+    or null if they have not saved any yet.
+    """
+    return (
+        db.query(StudyPreferences)
+        .filter(StudyPreferences.user_id == current_user.id)
+        .first()
+    )
+
+
+@router.put("/me/study-preferences", response_model=StudyPreferencesResponse)
+def save_study_preferences(
+    payload: StudyPreferencesRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Creates the student's study preferences, or replaces them if they
+    already exist. Always scoped to the logged-in student.
+    """
+    preferences = (
+        db.query(StudyPreferences)
+        .filter(StudyPreferences.user_id == current_user.id)
+        .first()
+    )
+
+    if preferences is None:
+        preferences = StudyPreferences(user_id=current_user.id)
+        db.add(preferences)
+
+    preferences.study_times = payload.study_times
+    preferences.study_days = payload.study_days
+    preferences.session_length_minutes = payload.session_length_minutes
+    preferences.break_preference = payload.break_preference
+
+    db.commit()
+    db.refresh(preferences)
+
+    return preferences
+
+@router.post("/me/complete-onboarding", response_model=UserResponse)
+def complete_onboarding(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Marks the student's onboarding as finished. Safe to call more than once.
+    The Gemini key and academic details must have been saved first.
+    """
+    has_academic_info = all(
+        [
+            current_user.university,
+            current_user.programme,
+            current_user.level,
+            current_user.semester,
+        ]
+    )
+    if not current_user.has_gemini_api_key or not has_academic_info:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Please finish the earlier setup steps (Gemini key and academic details) first.",
+        )
+
+    current_user.onboarding_completed = True
+    db.commit()
+    db.refresh(current_user)
+    return current_user

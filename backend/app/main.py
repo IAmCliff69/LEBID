@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.database import check_database_connection
-from app.routers import auth, users, courses, timetable, timetable_import, tasks, assignments, exams, events, study_sessions, conflicts, ai, analytics, notifications
+from app.routers import auth, users, courses, timetable, timetable_import, tasks, assignments, exams, events, study_sessions, conflicts, ai, analytics, notifications,study_plan
 
 app = FastAPI(
     title="Lebid API",
@@ -43,6 +43,7 @@ app.include_router(study_sessions.router, prefix="/api/study-sessions", tags=["s
 app.include_router(conflicts.router, prefix="/api/conflicts", tags=["conflicts"])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"])
+app.include_router(study_plan.router, prefix="/api/study-plan", tags=["study-plan"])
 
 # ---------------------------------------------------------------------------
 # Health check endpoints

@@ -158,11 +158,11 @@ export default function AcademicInformationPage() {
             className="mb-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl"
             style={friendlyFont}
           >
-            Tell us a little about your studies 🎓
+            Tell me a little about your studies 🎓
           </h1>
 
           <p className="mb-6 text-sm text-muted-foreground">
-            These details help Lebid understand your academic world and your
+            These details helps me understand your academic world and your
             current semester.
           </p>
 

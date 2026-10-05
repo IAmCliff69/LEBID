@@ -5,6 +5,7 @@ from sqlalchemy import String, Boolean, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
+from app.utils.encryption import EncryptedString
 
 
 class User(Base):
@@ -32,7 +33,8 @@ class User(Base):
     semester: Mapped[str | None] = mapped_column(String(50), nullable=True)
     academic_year: Mapped[str | None] = mapped_column(String(50), nullable=True)
         # Per-user Google Gemini API key (never returned in API responses)
-    gemini_api_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
+        # Stored ENCRYPTED in the database and never returned in API responses.
+    gemini_api_key: Mapped[str | None] = mapped_column(EncryptedString, nullable=True)
 
     @property
     def has_gemini_api_key(self) -> bool:
@@ -40,6 +42,9 @@ class User(Base):
         return bool(self.gemini_api_key)
 
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+        # False until the student finishes onboarding (plan activation or Finish Setup)
+    onboarding_completed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

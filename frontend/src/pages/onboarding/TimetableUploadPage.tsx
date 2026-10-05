@@ -15,6 +15,8 @@ import { useNavigate } from "react-router-dom";
 import LebidLogo from "@/components/brand/LebidLogo";
 import ThemeToggle from "@/components/layout/ThemeToggle";
 import { cn } from "@/lib/utils";
+import { useOnboarding } from "@/context/OnboardingContext";
+import PendingUploadBanner from "@/components/onboarding/PendingUploadBanner";
 
 const ACCEPTED_TYPES = [
   "application/pdf",
@@ -32,6 +34,7 @@ const friendlyFont = {
 export default function TimetableUploadPage() {
   const navigate = useNavigate();
   const shouldReduceMotion = useReducedMotion();
+    const { setTimetableFile, setExtraction } = useOnboarding();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -110,7 +113,7 @@ export default function TimetableUploadPage() {
     setError("");
   };
 
-  const handleUpload = async () => {
+    const handleUpload = () => {
     if (!selectedFile) {
       setError("Please select your timetable first.");
       return;
@@ -119,28 +122,22 @@ export default function TimetableUploadPage() {
     setError("");
     setIsPreparing(true);
 
-    /*
-     * Actual backend upload integration will be added
-     * in the next implementation step.
-     */
-    await new Promise((resolve) => setTimeout(resolve, 350));
+    // Keep the file in memory; the next screen uploads it and shows
+    // the real progress.
+    setTimetableFile(selectedFile);
+    setExtraction(null);
 
-    navigate("/onboarding/timetable-processing", {
-      replace: true,
-      state: {
-        fileName: selectedFile.name,
-        fileSize: selectedFile.size,
-        fileType: selectedFile.type,
-      },
-    });
+    navigate("/onboarding/timetable-processing", { replace: true });
   };
 
-  const handleSkip = () => {
+    const handleSkip = () => {
+    setTimetableFile(null);
+    setExtraction(null);
+
     navigate("/onboarding/study-preferences", {
       replace: true,
     });
   };
-
   return (
     <main
       className="relative flex min-h-dvh items-center justify-center p-4 sm:p-6"
@@ -181,10 +178,12 @@ export default function TimetableUploadPage() {
             </h1>
 
             <p className="text-sm text-muted-foreground">
-              Upload your lecture timetable and let Lebid use AI
+              Upload your lecture timetable and let me use AI
               to organize your academic week.
             </p>
           </div>
+
+          <PendingUploadBanner />
 
           {/* Upload area */}
           <div className="w-full">
@@ -218,9 +217,9 @@ export default function TimetableUploadPage() {
                   }
                 }}
                 className={cn(
-                  "flex min-h-[230px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-8 text-center transition-all sm:min-h-[250px]",
+                  "flex min-h-57.5 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-8 text-center transition-all sm:min-h-62.5",
                   isDragging
-                    ? "border-foreground bg-foreground/[0.04]"
+                    ? "border-foreground bg-foreground/4"
                     : "border-border hover:border-foreground/40 hover:bg-muted/30"
                 )}
               >

@@ -18,7 +18,9 @@ class Settings(BaseSettings):
     # CORS
     cors_origins: str = "http://localhost:5173"
 
-        # AI
+        # Key used to encrypt secrets stored in the database (e.g. Gemini API keys)
+    encryption_key: str
+        # AI        
     gemini_api_key: str = ""
     gemini_model: str = "gemini-3.8-flash"
 

@@ -1,5 +1,7 @@
-from pydantic import BaseModel, Field
+from datetime import datetime
 from typing import Any
+
+from pydantic import BaseModel, Field, model_validator
 
 
 class ExtractedEntry(BaseModel):
@@ -33,10 +35,15 @@ class ExtractionResponse(BaseModel):
 class ConfirmEntryRequest(BaseModel):
     """
     A single entry the student has reviewed and wants to save.
-    The student must provide a course_id linking this entry to one
-    of their existing courses.
+
+    The course can be given in two ways:
+    - course_id: one of the student's existing courses, or
+    - course_name (and optionally course_code): Lebid finds the matching
+      course, or creates it if the student does not have it yet.
     """
-    course_id: str
+    course_id: str | None = None
+    course_name: str | None = Field(default=None, max_length=255)
+    course_code: str | None = Field(default=None, max_length=50)
     day_of_week: int = Field(..., ge=0, le=6)
     start_time: str
     end_time: str
@@ -45,6 +52,14 @@ class ConfirmEntryRequest(BaseModel):
     class_type: str = "lecture"
     notes: str | None = None
 
+    @model_validator(mode="after")
+    def check_course_is_given(self):
+        has_name = bool(self.course_name and self.course_name.strip())
+        if not self.course_id and not has_name:
+            raise ValueError(
+                "Each entry needs a course: choose one of your courses or give a course name."
+            )
+        return self
 
 class ConfirmImportRequest(BaseModel):
     """
@@ -57,3 +72,10 @@ class ConfirmImportResponse(BaseModel):
     """Result of saving confirmed timetable entries."""
     saved_count: int
     message: str
+    courses_created: int = 0
+    duplicates_skipped: int = 0
+
+class PendingImportResponse(ExtractionResponse):
+    """An earlier upload that the student has not confirmed yet."""
+    original_filename: str
+    created_at: datetime    

@@ -14,6 +14,7 @@ import { getStudySessions } from "@/api/studySessions";
 import { getTasks } from "@/api/tasks";
 import { getTimetable } from "@/api/timetable";
 import { useAuth } from "@/context/AuthContext";
+import TimetablePromptCard from "@/components/dashboard/TimetablePromptCard";
 
 function toDateKey(date: Date): string {
   const year = date.getFullYear();
@@ -132,6 +133,9 @@ export default function DashboardPage() {
             </p>
           </div>
         </section>
+
+        {/* Shown only while there is no timetable yet */}
+        <TimetablePromptCard />
 
         {/* Overview */}
         <section>

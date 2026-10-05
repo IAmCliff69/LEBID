@@ -26,6 +26,7 @@ export interface User {
   academic_year: string | null;
   is_active: boolean;
   has_gemini_api_key?: boolean;
+  onboarding_completed?: boolean;
 }
 
 // =========================================================

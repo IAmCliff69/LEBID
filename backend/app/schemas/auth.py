@@ -25,7 +25,7 @@ class UserResponse(BaseModel):
     academic_year: str | None
     is_active: bool
     has_gemini_api_key: bool = False   # ← add this
-
+    onboarding_completed: bool = False
     model_config = {"from_attributes": True}
 
 

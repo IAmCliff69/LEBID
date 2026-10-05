@@ -8,8 +8,10 @@ from app.models.exam import Exam
 from app.models.event import Event
 from app.models.study_session import StudySession
 from app.models.notification import Notification
+from app.models.study_preferences import StudyPreferences
 
 __all__ = [
     "User", "Course", "TimetableEntry", "TimetableImport",
     "Task", "Assignment", "Exam", "Event", "StudySession", "Notification",
+    "StudyPreferences",
 ]

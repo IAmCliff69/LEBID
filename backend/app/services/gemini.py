@@ -127,10 +127,17 @@ def generate_text(
         )
     return response.text
 
+class GeminiUnreachableError(Exception):
+    """We could not reach Google at all (network problem, timeout, ...)."""
 
 def validate_gemini_api_key(api_key: str) -> bool:
     """
-    Checks that Google accepts this key. Returns True or False.
+    Checks that Google accepts this key.
+
+    Returns True if the key works, False if Google rejects it.
+    Raises GeminiUnreachableError if we could not reach Google at all, so a
+    network problem is never mistaken for a wrong key.
+
     We list the available models, which proves the key works without
     spending any of the student's quota on a generation request.
     """
@@ -138,8 +145,19 @@ def validate_gemini_api_key(api_key: str) -> bool:
         client = _make_client(api_key)
         next(iter(client.models.list()), None)
         return True
-    except Exception:
+    except errors.ClientError as e:
+        # 429 means Google recognised the key but the quota is used up.
+        # The key itself is fine.
+        if e.code == 429:
+            return True
+        print("Gemini key check was rejected by Google:", e.code, e.message)
         return False
+    except ValueError:
+        # An empty key
+        return False
+    except Exception as e:
+        print("Could not reach Google to check the Gemini key:", repr(e))
+        raise GeminiUnreachableError() from e
 
 
 def _extract_timetable(file_bytes: bytes, mime_type: str, api_key: str) -> dict[str, Any]:
