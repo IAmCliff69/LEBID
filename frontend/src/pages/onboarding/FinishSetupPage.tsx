@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "motion/react";
 import { ArrowRight } from "lucide-react";
 
@@ -21,6 +21,11 @@ function getErrorMessage(error: unknown, fallback: string): string {
 
 export default function FinishSetupPage() {
   const navigate = useNavigate();
+    // True when the student arrives here after activating their study plan.
+  const location = useLocation();
+  const planActivated =
+    (location.state as { planActivated?: boolean } | null)?.planActivated ===
+    true;
   const prefersReducedMotion = useReducedMotion();
 
   const { setUser } = useAuth();
@@ -117,8 +122,9 @@ export default function FinishSetupPage() {
             Your Lebid workspace is ready.
           </p>
           <p className="mb-6 text-sm text-muted-foreground">
-            Once you add your timetable, Lebid can use it to build your
-            personalized study plan.
+            {planActivated
+              ? "Your timetable is imported and your study plan is active."
+              : "Once you add your timetable, Lebid can use it to build your personalized study plan."}
           </p>
 
                     {error && (

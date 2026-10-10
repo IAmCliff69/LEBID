@@ -33,6 +33,10 @@ class PlannedStudySession(BaseModel):
     course_name: str
     course_code: str | None = None
     topic: str
+        # True when the session is before 07:00 or after 22:00, outside the usual hours
+    outside_usual_hours: bool = False
+    # True until the student chooses "Keep" for such a session
+    needs_confirmation: bool = False
 
 
 class GeneratedStudyPlan(BaseModel):

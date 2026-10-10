@@ -40,6 +40,8 @@ class TaskResponse(BaseModel):
     id: str
     user_id: str
     course_id: str | None
+    course_code: str | None = None
+    course_color: str | None = None
     title: str
     description: str | None
     deadline: datetime | None

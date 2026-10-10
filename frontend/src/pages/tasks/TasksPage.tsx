@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-
+import { toast } from "sonner";
 import AddTaskDialog from "@/components/tasks/AddTaskDialog";
-
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { getTasks, updateTask, deleteTask } from "@/api/tasks";
+import { useHighlightItem } from "@/hooks/useHighlightItem";
 
 import type { Task } from "@/api/tasks";
 
@@ -50,8 +51,10 @@ function isOverdue(task: Task): boolean {
 export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  useHighlightItem(!isLoading);
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -68,8 +71,9 @@ export default function TasksPage() {
     fetchTasks();
   }, []);
 
-  const handleTaskAdded = (task: Task) => {
+    const handleTaskAdded = (task: Task) => {
     setTasks((prev) => [task, ...prev]);
+    toast.success("Task added", { description: task.title });
   };
 
   // Toggle a task between completed and not_started
@@ -85,13 +89,26 @@ export default function TasksPage() {
       setTasks((prev) =>
         prev.map((t) => (t.id === task.id ? updated : t))
       );
+      toast.success(
+        newStatus === "completed" ? "Task completed" : "Task reopened",
+        { description: task.title }
+      );
     } catch {
-      console.error("Failed to update task status");
+      toast.error("Couldn't update the task", {
+        description: "Please try again.",
+      });
     }
   };
 
-  const handleDelete = async (task: Task) => {
-    if (!confirm(`Delete "${task.title}"? This cannot be undone.`)) return;
+    // Step 1: the trash button only opens the confirmation dialog.
+  const handleDelete = (task: Task) => {
+    setTaskToDelete(task);
+  };
+
+  // Step 2: runs when the student confirms in the dialog.
+  const confirmDelete = async () => {
+    if (!taskToDelete) return;
+    const task = taskToDelete;
 
     setDeletingId(String(task.id));
 
@@ -99,10 +116,14 @@ export default function TasksPage() {
       await deleteTask(task.id);
 
       setTasks((prev) => prev.filter((t) => t.id !== task.id));
+      toast.success("Task deleted", { description: task.title });
     } catch {
-      alert("Failed to delete task. Please try again.");
+      toast.error("Couldn't delete the task", {
+        description: "Please try again.",
+      });
     } finally {
       setDeletingId(null);
+      setTaskToDelete(null);
     }
   };
 
@@ -137,6 +158,15 @@ export default function TasksPage() {
         </div>
 
         <AddTaskDialog onTaskAdded={handleTaskAdded} />
+        <ConfirmDialog
+          open={taskToDelete !== null}
+          title="Delete this task?"
+          description={`"${taskToDelete?.title ?? ""}" will be permanently deleted. This cannot be undone.`}
+          confirmLabel="Delete task"
+          isLoading={deletingId !== null}
+          onConfirm={confirmDelete}
+          onCancel={() => setTaskToDelete(null)}
+        />
       </div>
 
       {/* Loading */}
@@ -239,6 +269,14 @@ export default function TasksPage() {
   );
 }
 
+// 45 -> "45 min", 120 -> "2 h", 90 -> "1 h 30 min"
+function formatDuration(minutes: number): string {
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest === 0 ? `${hours} h` : `${hours} h ${rest} min`;
+}
+
 // Individual task card component
 function TaskCard({
   task,
@@ -257,12 +295,14 @@ function TaskCard({
 
   return (
     <div
+      data-item-id={task.id}
       className={cn(
         "bg-card border border-border rounded-xl px-4 py-3 flex items-start gap-3 transition-opacity",
         isCompleted && "opacity-50",
         overdue &&
           !isCompleted &&
           "border-destructive/30 bg-destructive/[0.03]"
+          
       )}
     >
       {/* Complete toggle */}
@@ -299,7 +339,7 @@ function TaskCard({
           </span>
         </div>
 
-        <div className="flex items-center gap-3 mt-1">
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
           {task.course_code && (
             <span
               className="text-xs font-medium px-1.5 py-0.5 rounded"
@@ -324,6 +364,11 @@ function TaskCard({
             >
               {overdue && !isCompleted ? "Overdue · " : "Due "}
               {formatDeadline(task.deadline)}
+            </span>
+          )}
+          {task.estimated_duration_minutes && (
+            <span className="text-xs text-muted-foreground">
+              ~{formatDuration(task.estimated_duration_minutes)}
             </span>
           )}
         </div>

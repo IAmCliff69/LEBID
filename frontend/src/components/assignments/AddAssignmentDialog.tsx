@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { DateTimePicker } from "@/components/ui/date-picker";
 
 import {
   Dialog,
@@ -239,10 +240,18 @@ export default function AddAssignmentDialog({
                 </span>
               </Label>
 
-              <Input
-                id="date_assigned"
-                type="datetime-local"
-                {...register("date_assigned")}
+              <Controller
+                name="date_assigned"
+                control={control}
+                render={({ field }) => (
+                  <DateTimePicker
+                    id="date_assigned"
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                    defaultTime="09:00"
+                    clearable
+                  />
+                )}
               />
             </div>
 
@@ -251,10 +260,17 @@ export default function AddAssignmentDialog({
                 Deadline
               </Label>
 
-              <Input
-                id="deadline"
-                type="datetime-local"
-                {...register("deadline")}
+              <Controller
+                name="deadline"
+                control={control}
+                render={({ field }) => (
+                  <DateTimePicker
+                    id="deadline"
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                    invalid={!!errors.deadline}
+                  />
+                )}
               />
 
               {errors.deadline && (

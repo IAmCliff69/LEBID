@@ -4,6 +4,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate, useLocation } from "react-router-dom";
 import { z } from "zod";
 import { Eye, EyeOff, ArrowRight } from "lucide-react";
+import { toast } from "sonner";
+import { uploadAvatar } from "@/api/users";
+import AvatarPicker from "@/components/common/AvatarPicker";
 
 import { register as registerApi, login } from "@/api/auth";
 import { useAuth } from "@/context/AuthContext";
@@ -47,13 +50,22 @@ export default function AccountCreationPage() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
 
   const form = useForm<AccountFormData>({
     resolver: zodResolver(accountSchema),
   });
 
-  const onSubmit = async (data: AccountFormData) => {
+    const onSubmit = async (data: AccountFormData) => {
     setServerError(null);
+
+    // The profile photo is required
+    if (!photo) {
+      setPhotoError("Please add a profile photo to continue.");
+      return;
+    }
+
     try {
       await registerApi({
         name,
@@ -64,7 +76,19 @@ export default function AccountCreationPage() {
         email: data.email,
         password: data.password,
       });
-      setUser(user);
+
+      // Save the photo. If this step fails the account already exists, so we
+      // carry on and the student can add the photo later in Settings.
+      let signedInUser = user;
+      try {
+        signedInUser = await uploadAvatar(photo);
+      } catch {
+        toast.error("We couldn't save your photo", {
+          description: "You can add it later in Settings.",
+        });
+      }
+
+      setUser(signedInUser);
       // Next step of onboarding: Gemini API key setup
       navigate("/onboarding/gemini", { replace: true });
     } catch (error: unknown) {
@@ -84,7 +108,7 @@ export default function AccountCreationPage() {
         backgroundPosition: "center",
       }}
     >
-      <div className="relative flex w-full max-w-md flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
+      <div className="relative flex max-h-full w-full max-w-md flex-col overflow-y-auto rounded-2xl border border-border bg-card shadow-2xl">
         {/* Small logo top-left */}
         <div className="px-6 pt-6 sm:px-8 sm:pt-8">
           <LebidLogo className="w-16 sm:w-20" />
@@ -109,10 +133,22 @@ export default function AccountCreationPage() {
           </p>
 
           <form
-            onSubmit={form.handleSubmit(onSubmit)}
+            onSubmit={(event) => {
+              // Show the "photo required" message even if other fields are wrong too
+              if (!photo) setPhotoError("Please add a profile photo to continue.");
+              void form.handleSubmit(onSubmit)(event);
+            }}
             className="flex flex-col gap-4"
             noValidate
           >
+            <AvatarPicker
+              file={photo}
+              onSelect={(file) => {
+                setPhoto(file);
+                setPhotoError(null);
+              }}
+              error={photoError}
+            />
             <div>
               <label
                 htmlFor="account-email"

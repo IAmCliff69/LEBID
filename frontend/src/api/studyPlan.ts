@@ -24,6 +24,10 @@ export interface PlannedStudySession {
   course_name: string;
   course_code: string | null;
   topic: string;
+    // Set by the AI for sessions before 07:00 or after 22:00
+  outside_usual_hours?: boolean;
+  // True until the student chooses "Keep" for such a session
+  needs_confirmation?: boolean;
 }
 
 export interface GeneratedStudyPlan {

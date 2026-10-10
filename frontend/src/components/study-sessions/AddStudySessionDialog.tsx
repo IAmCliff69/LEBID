@@ -18,6 +18,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import ConflictWarning from "@/components/conflicts/ConflictWarning";
+import { DatePicker } from "@/components/ui/date-picker";
+import { TimePicker } from "@/components/ui/time-picker";
 
 import {
   Dialog,
@@ -44,6 +46,26 @@ const PRIORITIES = [
   { label: "Urgent", value: "urgent" },
 ];
 
+// "1" = does not repeat, "2".."16" = every week for that many weeks
+const REPEAT_OPTIONS = Array.from({ length: 16 }, (_, index) => {
+  const weeks = index + 1;
+  return {
+    value: String(weeks),
+    label: weeks === 1 ? "Does not repeat" : `Every week for ${weeks} weeks`,
+  };
+});
+
+// "2026-10-07", 4 weeks -> "Wed, Oct 28" (the date of the last session)
+function formatLastSessionDate(startDate: string, weeks: number): string {
+  const date = new Date(`${startDate}T00:00:00`);
+  date.setDate(date.getDate() + 7 * (weeks - 1));
+  return date.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
 const schema = z
   .object({
     course_id: z.string().min(1, "Course is required"),
@@ -54,6 +76,7 @@ const schema = z
     venue: z.string().trim().min(1, "Venue is required"),
     priority: z.string().min(1, "Priority is required"),
     notes: z.string().optional(),
+    repeat_weeks: z.string(),
   })
   .refine(
     (data) =>
@@ -74,7 +97,8 @@ interface Props {
   /** Pre-fills the date field (format: YYYY-MM-DD). */
   defaultDate?: string;
   /** Called after the backend confirms the session was created. */
-  onSessionAdded: (session: StudySession) => void;
+  /** "count" is how many sessions were created (1 unless the student chose to repeat). */
+  onSessionAdded: (session: StudySession, count: number) => void;
 }
 
 export default function AddStudySessionDialog({
@@ -103,6 +127,7 @@ export default function AddStudySessionDialog({
       venue: "",
       priority: "medium",
       notes: "",
+      repeat_weeks: "1",
     },
   });
 
@@ -113,6 +138,7 @@ const [conflicts, setConflicts] = useState<ConflictItem[]>([]);
 const sessionDate = watch("session_date");
 const startTime = watch("start_time");
 const endTime = watch("end_time");
+const repeatWeeks = Number(watch("repeat_weeks") || "1");
 
 // Automatically check for conflicts whenever the student fills in date + times
 useEffect(() => {
@@ -155,9 +181,10 @@ useEffect(() => {
         venue: data.venue.trim(),
         priority: data.priority as StudySessionPriority,
         notes: data.notes?.trim() || null,
+        repeat_weeks: Number(data.repeat_weeks),
       });
 
-      onSessionAdded(session);
+      onSessionAdded(session, Number(data.repeat_weeks));
       reset();
       setOpen(false);
     } catch (err: unknown) {
@@ -197,6 +224,7 @@ useEffect(() => {
         venue: "",
         priority: "medium",
         notes: "",
+        repeat_weeks: "1",
       });
     } else {
       setServerError(null);
@@ -285,10 +313,17 @@ useEffect(() => {
           <div className="space-y-1.5">
             <Label htmlFor="ss_date">Date</Label>
 
-            <Input
-              id="ss_date"
-              type="date"
-              {...register("session_date")}
+            <Controller
+              name="session_date"
+              control={control}
+              render={({ field }) => (
+                <DatePicker
+                  id="ss_date"
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  invalid={!!errors.session_date}
+                />
+              )}
             />
 
             {errors.session_date && (
@@ -303,10 +338,17 @@ useEffect(() => {
             <div className="space-y-1.5">
               <Label htmlFor="ss_start">Start time</Label>
 
-              <Input
-                id="ss_start"
-                type="time"
-                {...register("start_time")}
+              <Controller
+                name="start_time"
+                control={control}
+                render={({ field }) => (
+                  <TimePicker
+                    id="ss_start"
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                    invalid={!!errors.start_time}
+                  />
+                )}
               />
 
               {errors.start_time && (
@@ -319,10 +361,17 @@ useEffect(() => {
             <div className="space-y-1.5">
               <Label htmlFor="ss_end">End time</Label>
 
-              <Input
-                id="ss_end"
-                type="time"
-                {...register("end_time")}
+              <Controller
+                name="end_time"
+                control={control}
+                render={({ field }) => (
+                  <TimePicker
+                    id="ss_end"
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                    invalid={!!errors.end_time}
+                  />
+                )}
               />
 
               {errors.end_time && (
@@ -379,6 +428,44 @@ useEffect(() => {
             </div>
           </div>
 
+                    {/* Repeat */}
+          <div className="space-y-1.5">
+            <Label>Repeat</Label>
+
+            <Controller
+              name="repeat_weeks"
+              control={control}
+              render={({ field }) => (
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Does not repeat" />
+                  </SelectTrigger>
+
+                  <SelectContent>
+                    {REPEAT_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+
+            {repeatWeeks > 1 && (
+              <p className="text-xs text-muted-foreground">
+                {sessionDate
+                  ? `${repeatWeeks} sessions, the last one on ${formatLastSessionDate(
+                      sessionDate,
+                      repeatWeeks
+                    )}. `
+                  : `${repeatWeeks} sessions, one each week. `}
+                Same time and venue each week. The clash check only covers the
+                first date.
+              </p>
+            )}
+          </div>
+          
           {/* Notes */}
           <div className="space-y-1.5">
             <Label htmlFor="ss_notes">

@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { getMe, logout as logoutApi } from "@/api/auth";
 import type { User } from "@/api/auth";
 import { SESSION_EXPIRED_EVENT } from "@/api/client";
+import { clearReminderFlags } from "@/lib/reminders";
 
 interface AuthContextType {
   user: User | null;
@@ -46,7 +47,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // If any later API call gets a 401, the session is no longer valid.
   // Clearing the user makes ProtectedRoute redirect to /login (no reload).
   useEffect(() => {
-    const handleSessionExpired = () => setUser(null);
+    const handleSessionExpired = () => {
+      clearReminderFlags();
+      setUser(null);
+    };
     window.addEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
     return () =>
       window.removeEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
@@ -54,6 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     await logoutApi();
+    clearReminderFlags();
     setUser(null);
   };
 

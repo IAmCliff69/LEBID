@@ -281,7 +281,7 @@ export default function EditCourseDialog({
 
           {/* Actions */}
 
-          <div className="flex justify-end gap-3 border-t border-border pt-5">
+          <div className="flex justify-end gap-3 pt-2">
             <Button
               type="button"
               variant="outline"

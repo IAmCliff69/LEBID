@@ -27,6 +27,7 @@ export interface StudySession {
   notes: string | null;
   rescheduled_from_id: string | null;
   is_ai_generated: boolean;
+  is_edit_locked: boolean;
 }
 
 export interface CreateStudySessionData {
@@ -39,6 +40,7 @@ export interface CreateStudySessionData {
   priority?: StudySessionPriority;
   notes?: string | null;
   is_ai_generated?: boolean;
+  repeat_weeks?: number;
 }
 
 export interface UpdateStudySessionData {

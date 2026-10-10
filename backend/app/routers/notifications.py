@@ -7,6 +7,13 @@ from app.models.user import User
 from app.schemas.auth import MessageResponse
 from app.schemas.notification import NotificationResponse, GenerateNotificationsResponse
 from app.services.notifications import generate_notifications
+from datetime import datetime, timezone
+
+from app.models.notification_preferences import NotificationPreferences
+from app.schemas.notification_preferences import (
+    NotificationPreferencesRequest,
+    NotificationPreferencesResponse,
+)
 
 router = APIRouter()
 
@@ -162,3 +169,51 @@ def clear_all_notifications(
     ).delete()
     db.commit()
     return {"message": "All notifications cleared."}
+
+@router.get("/preferences", response_model=NotificationPreferencesResponse)
+def get_preferences(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns which notifications the student wants.
+    A student who never changed the settings gets everything switched on.
+    """
+    preferences = (
+        db.query(NotificationPreferences)
+        .filter(NotificationPreferences.user_id == current_user.id)
+        .first()
+    )
+    if preferences is None:
+        return NotificationPreferencesResponse(
+            deadline_reminders=True,
+            exam_reminders=True,
+            missed_session_alerts=True,
+        )
+    return preferences
+
+
+@router.put("/preferences", response_model=NotificationPreferencesResponse)
+def save_preferences(
+    payload: NotificationPreferencesRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Saves the student's notification switches (creates or replaces them)."""
+    preferences = (
+        db.query(NotificationPreferences)
+        .filter(NotificationPreferences.user_id == current_user.id)
+        .first()
+    )
+    if preferences is None:
+        preferences = NotificationPreferences(user_id=current_user.id)
+        db.add(preferences)
+
+    preferences.deadline_reminders = payload.deadline_reminders
+    preferences.exam_reminders = payload.exam_reminders
+    preferences.missed_session_alerts = payload.missed_session_alerts
+    preferences.updated_at = datetime.now(timezone.utc)
+
+    db.commit()
+    db.refresh(preferences)
+    return preferences

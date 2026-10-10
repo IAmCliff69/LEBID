@@ -6,6 +6,7 @@ from app.models.user import User
 from app.schemas.ai import ChatRequest, ChatResponse, Recommendation
 from app.services.context_builder import build_student_context
 from app.services.ai_planner import get_ai_response
+from app.services.gemini import explain_gemini_error
 
 router = APIRouter()
 
@@ -61,10 +62,10 @@ def chat_with_ai(
             detail=str(e),
         )
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"AI service error: {str(e)}",
-        )
+        # The real error stays in the server terminal; the student gets plain words
+        print("AI chat failed:", repr(e))
+        status_code, message = explain_gemini_error(e, "answer")
+        raise HTTPException(status_code=status_code, detail=message)
 
     recommendations = []
 

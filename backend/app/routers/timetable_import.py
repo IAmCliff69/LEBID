@@ -1,5 +1,5 @@
 import json
-from datetime import time
+from datetime import date, time
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
 from sqlalchemy.orm import Session
@@ -9,12 +9,18 @@ from app.models.timetable_import import TimetableImport
 from app.models.timetable import TimetableEntry
 from app.models.course import Course
 from app.models.user import User
+from app.models.assignment import Assignment
+from app.models.exam import Exam
+from app.models.study_session import StudySession
+from app.models.task import Task
 from app.schemas.timetable_import import (
     ConfirmImportRequest,
     ConfirmImportResponse,
     ExtractedEntry,
     ExtractionResponse,
     PendingImportResponse,
+    CourseUsage,
+    ReplacePreviewResponse,
 )
 from app.services.gemini import extract_timetable_from_image, extract_timetable_from_pdf
 from app.services.study_plan_activation import _find_course
@@ -41,6 +47,45 @@ def parse_time_string(time_str: str) -> time:
     except (ValueError, IndexError):
         raise ValueError(f"Invalid time format: '{time_str}'. Expected HH:MM.")
 
+def _upcoming_ai_sessions_query(db: Session, user_id: str):
+    """
+    Study sessions the AI planned that have not happened yet. These were built
+    around the old timetable, so replacing the timetable removes them.
+    Completed, skipped, past and hand-made sessions are never included.
+    """
+    return db.query(StudySession).filter(
+        StudySession.user_id == user_id,
+        StudySession.is_ai_generated.is_(True),
+        StudySession.status == "planned",
+        StudySession.session_date >= date.today(),
+    )
+
+
+def _course_usage(db: Session, user_id: str, course: Course) -> CourseUsage:
+    """Counts the work linked to a course (not counting sessions about to be removed)."""
+    upcoming_ai = (
+        _upcoming_ai_sessions_query(db, user_id)
+        .filter(StudySession.course_id == course.id)
+        .count()
+    )
+    all_sessions = (
+        db.query(StudySession).filter(StudySession.course_id == course.id).count()
+    )
+    return CourseUsage(
+        id=course.id,
+        code=course.code,
+        name=course.name,
+        tasks=db.query(Task).filter(Task.course_id == course.id).count(),
+        assignments=db.query(Assignment)
+        .filter(Assignment.course_id == course.id)
+        .count(),
+        exams=db.query(Exam).filter(Exam.course_id == course.id).count(),
+        study_sessions=all_sessions - upcoming_ai,
+    )
+
+
+def _has_linked_work(usage: CourseUsage) -> bool:
+    return usage.tasks + usage.assignments + usage.exams + usage.study_sessions > 0    
 
 @router.post("/upload", response_model=ExtractionResponse)
 async def upload_timetable(
@@ -210,6 +255,82 @@ async def upload_timetable(
             ),
         )
 
+@router.post("/confirm/{import_id}/preview", response_model=ReplacePreviewResponse)
+def preview_replace(
+    import_id: str,
+    payload: ConfirmImportRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Shows what replacing the current timetable with these entries would do.
+    Nothing is changed or saved by this route.
+    """
+    import_session = (
+        db.query(TimetableImport)
+        .filter(
+            TimetableImport.id == import_id,
+            TimetableImport.user_id == current_user.id,
+        )
+        .first()
+    )
+    if not import_session:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Import session not found.",
+        )
+
+    # Which of the student's courses does the new timetable use?
+    used_course_ids: set[str] = set()
+    for entry in payload.entries:
+        if entry.course_id:
+            course = (
+                db.query(Course)
+                .filter(Course.id == entry.course_id, Course.user_id == current_user.id)
+                .first()
+            )
+        else:
+            name = (entry.course_name or "").strip()
+            code = (entry.course_code or "").strip() or None
+            course = _find_course(db, current_user.id, name, code)
+        if course:
+            used_course_ids.add(course.id)
+
+    existing_class_count = (
+        db.query(TimetableEntry)
+        .filter(
+            TimetableEntry.user_id == current_user.id,
+            TimetableEntry.is_active.is_(True),
+        )
+        .count()
+    )
+
+    courses_to_remove: list[CourseUsage] = []
+    courses_with_work: list[CourseUsage] = []
+    all_courses = (
+        db.query(Course)
+        .filter(Course.user_id == current_user.id, Course.is_active.is_(True))
+        .order_by(Course.name)
+        .all()
+    )
+    for course in all_courses:
+        if course.id in used_course_ids:
+            continue
+        usage = _course_usage(db, current_user.id, course)
+        if _has_linked_work(usage):
+            courses_with_work.append(usage)
+        else:
+            courses_to_remove.append(usage)
+
+    return ReplacePreviewResponse(
+        existing_class_count=existing_class_count,
+        new_class_count=len(payload.entries),
+        upcoming_ai_sessions_count=_upcoming_ai_sessions_query(
+            db, current_user.id
+        ).count(),
+        courses_to_remove=courses_to_remove,
+        courses_with_work=courses_with_work,
+    )
 
 @router.post("/confirm/{import_id}", response_model=ConfirmImportResponse)
 def confirm_import(
@@ -255,6 +376,25 @@ def confirm_import(
             detail="No entries provided to save.",
         )
 
+        classes_removed = 0
+    sessions_removed = 0
+    courses_removed = 0
+    courses_kept = 0
+    used_course_ids: set[str] = set()
+
+    # Replacing: clear the old timetable and the upcoming AI-planned sessions
+    # that were built around it. If anything below fails, none of this is saved.
+    if payload.replace_existing:
+        classes_removed = (
+            db.query(TimetableEntry)
+            .filter(TimetableEntry.user_id == current_user.id)
+            .delete(synchronize_session=False)
+        )
+        sessions_removed = _upcoming_ai_sessions_query(
+            db, current_user.id
+        ).delete(synchronize_session=False)
+        db.flush()
+    
     # Courses already looked up or created during this request
     resolved_courses: dict[tuple[str, str], Course] = {}
     seen_entries: set[tuple[str, int, time, time]] = set()
@@ -295,6 +435,7 @@ def confirm_import(
                     courses_created += 1
                 resolved_courses[key] = course
 
+        used_course_ids.add(course.id)
         # 2. Parse the time strings
         try:
             start = parse_time_string(entry.start_time)
@@ -347,6 +488,23 @@ def confirm_import(
         )
         saved_count += 1
 
+        # Replacing: clean up courses that are not in the new timetable
+    if payload.replace_existing:
+        old_courses = (
+            db.query(Course)
+            .filter(Course.user_id == current_user.id, Course.is_active.is_(True))
+            .all()
+        )
+        for course in old_courses:
+            if course.id in used_course_ids:
+                continue
+            usage = _course_usage(db, current_user.id, course)
+            if not _has_linked_work(usage) or course.id in payload.delete_course_ids:
+                db.delete(course)
+                courses_removed += 1
+            else:
+                courses_kept += 1
+
     # Mark the import session as confirmed
     import_session.status = "confirmed"
     db.commit()
@@ -356,12 +514,24 @@ def confirm_import(
         message += f" Created {courses_created} new courses."
     if duplicates_skipped:
         message += f" Skipped {duplicates_skipped} already in your timetable."
+    if payload.replace_existing:
+        message += f" Replaced {classes_removed} old classes."
+        if sessions_removed:
+            message += f" Removed {sessions_removed} upcoming study sessions planned around the old timetable."
+        if courses_removed:
+            message += f" Removed {courses_removed} courses no longer in your timetable."
+        if courses_kept:
+            message += f" Kept {courses_kept} courses that still have work linked."
 
     return ConfirmImportResponse(
         saved_count=saved_count,
         message=message,
         courses_created=courses_created,
         duplicates_skipped=duplicates_skipped,
+        classes_removed=classes_removed,
+        sessions_removed=sessions_removed,
+        courses_removed=courses_removed,
+        courses_kept=courses_kept,
     )
 
 

@@ -67,6 +67,14 @@ class ConfirmImportRequest(BaseModel):
     """
     entries: list[ConfirmEntryRequest]
 
+    # True = the new timetable REPLACES the current one
+    replace_existing: bool = False
+
+    # Courses that are not in the new timetable but have work linked to them
+    # (tasks, assignments, exams, study sessions) are kept, unless the student
+    # ticked them in the confirmation pop-up. Those ids are listed here.
+    delete_course_ids: list[str] = []
+
 
 class ConfirmImportResponse(BaseModel):
     """Result of saving confirmed timetable entries."""
@@ -74,6 +82,33 @@ class ConfirmImportResponse(BaseModel):
     message: str
     courses_created: int = 0
     duplicates_skipped: int = 0
+    # Only used when the new timetable replaced the old one
+    classes_removed: int = 0
+    sessions_removed: int = 0
+    courses_removed: int = 0
+    courses_kept: int = 0
+
+
+class CourseUsage(BaseModel):
+    """A course and how much work is linked to it."""
+    id: str
+    code: str | None
+    name: str
+    tasks: int
+    assignments: int
+    exams: int
+    study_sessions: int
+
+
+class ReplacePreviewResponse(BaseModel):
+    """What replacing the timetable would do (nothing is changed yet)."""
+    existing_class_count: int
+    new_class_count: int
+    upcoming_ai_sessions_count: int
+    # Not in the new timetable and nothing linked: removed automatically
+    courses_to_remove: list[CourseUsage]
+    # Not in the new timetable but with work linked: kept unless the student ticks them
+    courses_with_work: list[CourseUsage]
 
 class PendingImportResponse(ExtractionResponse):
     """An earlier upload that the student has not confirmed yet."""

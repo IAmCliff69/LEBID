@@ -38,12 +38,35 @@ export interface ConfirmImportResponse {
   message: string;
   courses_created: number;
   duplicates_skipped: number;
+  classes_removed: number;
+  sessions_removed: number;
+  courses_removed: number;
+  courses_kept: number;
 }
 
 // An earlier upload that was read by the AI but not confirmed yet.
 export interface PendingImport extends ExtractionResponse {
   original_filename: string;
   created_at: string;
+}
+
+export interface CourseUsage {
+  id: string;
+  code: string | null;
+  name: string;
+  tasks: number;
+  assignments: number;
+  exams: number;
+  study_sessions: number;
+}
+
+// What replacing the timetable would do (nothing is changed by asking)
+export interface ReplacePreview {
+  existing_class_count: number;
+  new_class_count: number;
+  upcoming_ai_sessions_count: number;
+  courses_to_remove: CourseUsage[];
+  courses_with_work: CourseUsage[];
 }
 
 export const uploadTimetable = async (
@@ -58,13 +81,30 @@ export const uploadTimetable = async (
   });
   return response.data;
 };
-export const confirmImport = async (
+
+export const previewReplace = async (
   importId: string,
   entries: ConfirmEntryRequest[]
+): Promise<ReplacePreview> => {
+  const response = await apiClient.post(
+    `/timetable-import/confirm/${importId}/preview`,
+    { entries }
+  );
+  return response.data;
+};
+
+export const confirmImport = async (
+  importId: string,
+  entries: ConfirmEntryRequest[],
+  options: { replace_existing?: boolean; delete_course_ids?: string[] } = {}
 ): Promise<ConfirmImportResponse> => {
   const response = await apiClient.post(
     `/timetable-import/confirm/${importId}`,
-    { entries }
+    {
+      entries,
+      replace_existing: options.replace_existing ?? false,
+      delete_course_ids: options.delete_course_ids ?? [],
+    }
   );
   return response.data;
 };

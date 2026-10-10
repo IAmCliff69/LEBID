@@ -37,7 +37,7 @@ export const updateCourse = async (
   id: number,
   data: Partial<CreateCourseData>
 ): Promise<Course> => {
-  const response = await apiClient.put(`/courses/${id}`, data);
+    const response = await apiClient.patch(`/courses/${id}`, data);
   return response.data;
 };
 

@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { DatePicker } from "@/components/ui/date-picker";
+import { TimePicker } from "@/components/ui/time-picker";
 import { Plus } from "lucide-react";
 
 import { createEvent } from "@/api/events";
@@ -158,7 +160,18 @@ export default function AddEventDialog({ onEventAdded }: Props) {
           {/* Date */}
           <div className="space-y-1.5">
             <Label htmlFor="ev_date">Date</Label>
-            <Input id="ev_date" type="date" {...register("event_date")} />
+            <Controller
+              name="event_date"
+              control={control}
+              render={({ field }) => (
+                <DatePicker
+                  id="ev_date"
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  invalid={!!errors.event_date}
+                />
+              )}
+            />
             {errors.event_date && (
               <p className="text-destructive text-xs">{errors.event_date.message}</p>
             )}
@@ -171,14 +184,37 @@ export default function AddEventDialog({ onEventAdded }: Props) {
                 Start time{" "}
                 <span className="text-muted-foreground font-normal">(optional)</span>
               </Label>
-              <Input id="ev_start" type="time" {...register("start_time")} />
+              <Controller
+                name="start_time"
+                control={control}
+                render={({ field }) => (
+                  <TimePicker
+                    id="ev_start"
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                    clearable
+                  />
+                )}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="ev_end">
                 End time{" "}
                 <span className="text-muted-foreground font-normal">(optional)</span>
               </Label>
-              <Input id="ev_end" type="time" {...register("end_time")} />
+              <Controller
+                name="end_time"
+                control={control}
+                render={({ field }) => (
+                  <TimePicker
+                    id="ev_end"
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                    clearable
+                    invalid={!!errors.end_time}
+                  />
+                )}
+              />
               {errors.end_time && (
                 <p className="text-destructive text-xs">{errors.end_time.message}</p>
               )}

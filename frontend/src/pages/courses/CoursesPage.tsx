@@ -1,16 +1,19 @@
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { BookOpen, GraduationCap, Plus, Trash2 } from "lucide-react";
 import AddCourseDialog from "@/components/courses/AddCourseDialog";
 import EditCourseDialog from "@/components/courses/EditCourseDialog";
 import { getCourses, deleteCourse } from "@/api/courses";
 import type { Course } from "@/api/courses";
 import { Button } from "@/components/ui/button";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 
 export default function CoursesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 const [error, setError] = useState<string | null>(null);
 const [deletingId, setDeletingId] = useState<string | null>(null);
+const [courseToDelete, setCourseToDelete] = useState<Course | null>(null);
 
   useEffect(() => {
     const fetchCourses = async () => {
@@ -29,8 +32,11 @@ const [deletingId, setDeletingId] = useState<string | null>(null);
     fetchCourses();
   }, []);
 
-  const handleCourseAdded = (course: Course) => {
+    const handleCourseAdded = (course: Course) => {
     setCourses((prev) => [...prev, course]);
+    toast.success("Course added", {
+      description: `${course.name} is now in your courses.`,
+    });
   };
 
   const handleCourseUpdated = (updatedCourse: Course) => {
@@ -41,18 +47,35 @@ const [deletingId, setDeletingId] = useState<string | null>(null);
           : course
       )
     );
+    toast.success("Course updated", {
+      description: `${updatedCourse.name} was saved.`,
+    });
   };
 
-  const handleDelete = async (course: Course) => {
-    if (!confirm(`Delete "${course.name}"? This will also remove all timetable entries, tasks, and assignments linked to this course.`)) return;
+    // Step 1: the Delete button only opens the confirmation dialog.
+  const handleDelete = (course: Course) => {
+    setCourseToDelete(course);
+  };
+
+  // Step 2: runs when the student confirms in the dialog.
+  const confirmDelete = async () => {
+    if (!courseToDelete) return;
+    const course = courseToDelete;
+
     setDeletingId(String(course.id));
     try {
       await deleteCourse(course.id);
       setCourses((prev) => prev.filter((c) => c.id !== course.id));
+      toast.success("Course deleted", {
+        description: `${course.name} was removed.`,
+      });
     } catch {
-      alert("Failed to delete course. Please try again.");
+      toast.error("Couldn't delete the course", {
+        description: "Please try again.",
+      });
     } finally {
       setDeletingId(null);
+      setCourseToDelete(null);
     }
   };
 
@@ -76,7 +99,15 @@ const [deletingId, setDeletingId] = useState<string | null>(null);
             keep your academic information organized.
           </p>
         </div>
-
+        <ConfirmDialog
+          open={courseToDelete !== null}
+          title="Delete this course?"
+          description={`"${courseToDelete?.name ?? ""}" will be deleted, and so will all timetable entries, tasks and assignments linked to it. This cannot be undone.`}
+          confirmLabel="Delete course"
+          isLoading={deletingId !== null}
+          onConfirm={confirmDelete}
+          onCancel={() => setCourseToDelete(null)}
+        />
         <AddCourseDialog
           onCourseAdded={handleCourseAdded}
         />

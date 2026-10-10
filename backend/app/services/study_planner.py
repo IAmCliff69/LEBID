@@ -30,7 +30,14 @@ BREAK_MINUTES = {"short": 10, "long": 20}   # gap kept around classes and betwee
 MAX_SESSIONS_PER_DAY = 3  
 MIN_SESSION_MINUTES = 30                    # shortest study session
 MAX_DAILY_STUDY_MINUTES = 6 * 60            # never plan more than 6 hours in one day                  # never overload a day
-GRID_MINUTES = 15                           # session start times snap to 15 minutes
+GRID_MINUTES = 15      
+# Extra windows OUTSIDE the usual hours. The AI may use them for a few sessions,
+# but the student must confirm each one in the plan review before it is kept.
+EXTENDED_WINDOWS = {
+    "early": (5 * 60, 7 * 60),          # 05:00 - 07:00
+    "late": (22 * 60, 23 * 60 + 45),    # 22:00 - 23:45
+}
+MAX_EXTENDED_SESSIONS = 3               # in the whole week                     # session start times snap to 15 minutes
 
 
 class PlanGenerationError(Exception):
@@ -57,6 +64,7 @@ class FreeWindow:
     day_of_week: int
     start_min: int
     end_min: int
+    extended: bool = False   # True for early-morning / late-night windows
 
 
 # ---------------------------------------------------------------------------
@@ -167,7 +175,8 @@ def classes_from_saved_timetable(db: Session, user_id: str) -> tuple[list[ClassB
 def find_free_windows(classes: list[ClassBlock], preferences: Any) -> list[FreeWindow]:
     """
     On each preferred study day, finds the stretches of free time inside the
-    chosen times of day. A break-sized gap is kept before and after every class.
+    chosen times of day, plus the extra early-morning / late-night stretches
+    (marked extended). A break-sized gap is kept before and after every class.
     """
     gap = BREAK_MINUTES[preferences.break_preference]
 
@@ -181,6 +190,9 @@ def find_free_windows(classes: list[ClassBlock], preferences: Any) -> list[FreeW
         else:
             merged.append([start, end])
 
+    # The extended ranges are never merged with the normal ones
+    extended_ranges = sorted(EXTENDED_WINDOWS.values())
+
     windows: list[FreeWindow] = []
 
     for day in sorted(preferences.study_days):
@@ -191,36 +203,38 @@ def find_free_windows(classes: list[ClassBlock], preferences: Any) -> list[FreeW
             if c.day_of_week == day
         )
 
-        for range_start, range_end in merged:
-            # Cut the classes out of this time of day
-            cursor = range_start
-            free_parts: list[tuple[int, int]] = []
+        for is_extended, ranges in ((False, merged), (True, extended_ranges)):
+            for range_start, range_end in ranges:
+                # Cut the classes out of this stretch of the day
+                cursor = range_start
+                free_parts: list[tuple[int, int]] = []
 
-            for busy_start, busy_end in busy:
-                if busy_end <= cursor:
-                    continue
-                if busy_start >= range_end:
-                    break
-                if busy_start > cursor:
-                    free_parts.append((cursor, busy_start))
-                cursor = max(cursor, busy_end)
+                for busy_start, busy_end in busy:
+                    if busy_end <= cursor:
+                        continue
+                    if busy_start >= range_end:
+                        break
+                    if busy_start > cursor:
+                        free_parts.append((cursor, busy_start))
+                    cursor = max(cursor, busy_end)
 
-            if cursor < range_end:
-                free_parts.append((cursor, range_end))
+                if cursor < range_end:
+                    free_parts.append((cursor, range_end))
 
-            # Keep only the parts long enough for a study session
-            for part_start, part_end in free_parts:
-                start = _round_up(part_start, GRID_MINUTES)
-                end = (part_end // GRID_MINUTES) * GRID_MINUTES
-                if end - start >= MIN_SESSION_MINUTES:
-                    windows.append(
-                        FreeWindow(
-                            window_id=f"{day}-{_format(start)}",
-                            day_of_week=day,
-                            start_min=start,
-                            end_min=end,
+                # Keep only the parts long enough for a study session
+                for part_start, part_end in free_parts:
+                    start = _round_up(part_start, GRID_MINUTES)
+                    end = (part_end // GRID_MINUTES) * GRID_MINUTES
+                    if end - start >= MIN_SESSION_MINUTES:
+                        windows.append(
+                            FreeWindow(
+                                window_id=f"{day}-{_format(start)}",
+                                day_of_week=day,
+                                start_min=start,
+                                end_min=end,
+                                extended=is_extended,
+                            )
                         )
-                    )
 
     return windows
 
@@ -280,6 +294,7 @@ def _build_prompt(courses: dict[str, dict[str, Any]], windows: list[FreeWindow],
             "start": _format(w.start_min),
             "end": _format(w.end_min),
             "length_minutes": w.end_min - w.start_min,
+            "kind": "extended" if w.extended else "normal",
         }
         for w in windows
     ]
@@ -301,6 +316,10 @@ def _build_prompt(courses: dict[str, dict[str, Any]], windows: list[FreeWindow],
         + "- Aim for about 2 sessions per course across the week when there is room. "
         + "Spread each course across different days.\n"
         + "- Do NOT fill every window. A realistic, lighter plan is better than an overloaded one.\n"
+        + "- Windows with kind \"extended\" are early morning (before 07:00) or late night (after 22:00), "
+        + "outside the student's usual hours. Use them only when the normal windows leave a course with "
+        + "too little study time, use at most " + str(MAX_EXTENDED_SESSIONS) + " of them in the whole week, "
+        + "and never make them the main part of the plan. The student will be asked to confirm each one.\n"
         + "- Use only window_id values from FREE WINDOWS and only course keys from COURSES.\n"
         + "- topic must be short, specific and practical (under 80 characters).\n"
         + "\nReturn ONLY this JSON:\n"
@@ -351,6 +370,7 @@ def _build_sessions(
     placed: dict[str, list[tuple[int, int]]] = {}   # sessions already placed in each window
     count_per_day: dict[int, int] = {}
     minutes_per_day: dict[int, int] = {}
+    extended_count = 0
     sessions: list[PlannedStudySession] = []
 
     for item in raw_sessions:
@@ -392,10 +412,14 @@ def _build_sessions(
             continue
         if minutes_per_day.get(day, 0) + duration > MAX_DAILY_STUDY_MINUTES:
             continue
+        if window.extended and extended_count >= MAX_EXTENDED_SESSIONS:
+            continue
 
         placed.setdefault(window.window_id, []).append((start, end))
         count_per_day[day] = count_per_day.get(day, 0) + 1
         minutes_per_day[day] = minutes_per_day.get(day, 0) + duration
+        if window.extended:
+            extended_count += 1
 
         topic = str(item.get("topic") or "").strip()[:120] or "Study session"
 
@@ -408,6 +432,8 @@ def _build_sessions(
                 course_name=course["name"],
                 course_code=course["code"],
                 topic=topic,
+                outside_usual_hours=window.extended,
+                needs_confirmation=window.extended,
             )
         )
 
@@ -427,7 +453,7 @@ def build_study_plan(
     and PlanGenerationError when the AI's answer was not usable.
     """
     windows = find_free_windows(classes, preferences)
-    if not windows:
+    if not any(not w.extended for w in windows):
         raise ValueError(
             "We couldn't find any free time in your preferred study days and "
             "times of day. Try different days or times of day."
@@ -465,7 +491,7 @@ def build_study_plan(
             "because the day or time was unclear."
         )
 
-    days_with_windows = {w.day_of_week for w in windows}
+    days_with_windows = {w.day_of_week for w in windows if not w.extended}
     for day in sorted(preferences.study_days):
         if day not in days_with_windows:
             warnings.append(

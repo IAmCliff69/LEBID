@@ -27,6 +27,8 @@ export interface User {
   is_active: boolean;
   has_gemini_api_key?: boolean;
   onboarding_completed?: boolean;
+  has_avatar?: boolean;
+  avatar_updated_at?: string | null;
 }
 
 // =========================================================

@@ -9,7 +9,12 @@ from app.schemas.auth import (
     RegisterRequest,
     UserResponse,
 )
-from app.utils.security import create_access_token, hash_password, verify_password
+from app.utils.security import (
+    create_access_token,
+    hash_password,
+    set_auth_cookie,
+    verify_password,
+)
 
 router = APIRouter()
 
@@ -75,14 +80,7 @@ def login(payload: LoginRequest, response: Response, db: Session = Depends(get_d
 
     # Create JWT and set it as an HttpOnly cookie
     token = create_access_token(user_id=user.id)
-    response.set_cookie(
-        key="access_token",
-        value=token,
-        httponly=True,       # JavaScript cannot read this cookie
-        secure=False,        # Set to True in production (requires HTTPS)
-        samesite="lax",      # Protects against CSRF
-        max_age=60 * 60,     # 1 hour in seconds
-    )
+    set_auth_cookie(response, token)
 
     return user
 

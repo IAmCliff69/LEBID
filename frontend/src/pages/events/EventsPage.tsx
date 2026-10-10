@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { CalendarDays } from "lucide-react";
-
+import { toast } from "sonner";
 import { getEvents, deleteEvent } from "@/api/events";
 import type { PlannerEvent } from "@/api/events";
-
+import { useHighlightItem } from "@/hooks/useHighlightItem";
 import AddEventDialog from "@/components/events/AddEventDialog";
 import EditEventDialog from "@/components/events/EditEventDialog";
 
@@ -40,6 +40,7 @@ function daysUntil(dateStr: string): number {
 export default function EventsPage() {
   const [events, setEvents] = useState<PlannerEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  useHighlightItem(!isLoading);
   const [error, setError] = useState<string | null>(null);
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -53,12 +54,13 @@ export default function EventsPage() {
       .finally(() => setIsLoading(false));
   }, []);
 
-  const handleEventAdded = (event: PlannerEvent) => {
+    const handleEventAdded = (event: PlannerEvent) => {
     setEvents((prev) =>
       [...prev, event].sort(
         (a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime()
       )
     );
+    toast.success("Event added", { description: event.title });
   };
 
   const handleEventUpdated = (updated: PlannerEvent) => {
@@ -67,6 +69,7 @@ export default function EventsPage() {
         .map((e) => (e.id === updated.id ? updated : e))
         .sort((a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime())
     );
+    toast.success("Event updated", { description: updated.title });
   };
 
   const handleDeleteConfirm = async (event: PlannerEvent) => {
@@ -76,6 +79,7 @@ export default function EventsPage() {
       await deleteEvent(event.id);
       setEvents((prev) => prev.filter((e) => e.id !== event.id));
       setConfirmingDeleteId(null);
+      toast.success("Event deleted", { description: event.title });
     } catch {
       setDeleteError("Failed to delete event. Please try again.");
     } finally {
@@ -222,7 +226,8 @@ function EventCard({
         : "bg-primary/10 text-primary";
 
   return (
-    <div
+      <div
+      data-item-id={event.id}
       className={`bg-card border border-border rounded-xl px-4 py-4 ${
         isPast ? "opacity-60" : ""
       }`}

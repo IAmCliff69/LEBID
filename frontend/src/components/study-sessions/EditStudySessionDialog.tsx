@@ -19,6 +19,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import ConflictWarning from "@/components/conflicts/ConflictWarning";
+import { DatePicker } from "@/components/ui/date-picker";
+import { TimePicker } from "@/components/ui/time-picker";
 
 import {
   Dialog,
@@ -290,10 +292,17 @@ useEffect(() => {
           <div className="space-y-1.5">
             <Label htmlFor="edit_ss_date">Date</Label>
 
-            <Input
-              id="edit_ss_date"
-              type="date"
-              {...register("session_date")}
+            <Controller
+              name="session_date"
+              control={control}
+              render={({ field }) => (
+                <DatePicker
+                  id="edit_ss_date"
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  invalid={!!errors.session_date}
+                />
+              )}
             />
 
             {errors.session_date && (
@@ -308,10 +317,17 @@ useEffect(() => {
             <div className="space-y-1.5">
               <Label htmlFor="edit_ss_start">Start time</Label>
 
-              <Input
-                id="edit_ss_start"
-                type="time"
-                {...register("start_time")}
+              <Controller
+                name="start_time"
+                control={control}
+                render={({ field }) => (
+                  <TimePicker
+                    id="edit_ss_start"
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                    invalid={!!errors.start_time}
+                  />
+                )}
               />
 
               {errors.start_time && (
@@ -324,10 +340,17 @@ useEffect(() => {
             <div className="space-y-1.5">
               <Label htmlFor="edit_ss_end">End time</Label>
 
-              <Input
-                id="edit_ss_end"
-                type="time"
-                {...register("end_time")}
+              <Controller
+                name="end_time"
+                control={control}
+                render={({ field }) => (
+                  <TimePicker
+                    id="edit_ss_end"
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                    invalid={!!errors.end_time}
+                  />
+                )}
               />
 
               {errors.end_time && (

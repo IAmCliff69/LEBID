@@ -15,6 +15,7 @@ from app.schemas.study_plan import (
     ActivatePlanRequest,
 )
 from app.services.study_plan_adjuster import adjust_study_plan
+from app.services.gemini import explain_gemini_error
 from app.services.study_plan_activation import activate_plan
 from app.services.study_planner import (
     PlanGenerationError,
@@ -95,21 +96,10 @@ def generate_study_plan(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except PlanGenerationError as e:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e))
-    except genai_errors.ClientError as e:
-        if e.code == 429:
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="The AI service is busy right now. Please wait a minute and try again.",
-            )
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="The AI service could not build your plan. Please try again.",
-        )
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="The AI service could not build your plan. Please try again.",
-        )
+    except Exception as e:
+        print("Plan generation failed:", repr(e))
+        status_code, message = explain_gemini_error(e, "build your study plan")
+        raise HTTPException(status_code=status_code, detail=message)
 
 @router.post("/adjust", response_model=AdjustedStudyPlan)
 def adjust_plan(
@@ -181,21 +171,10 @@ def adjust_plan(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except PlanGenerationError as e:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e))
-    except genai_errors.ClientError as e:
-        if e.code == 429:
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="The AI service is busy right now. Please wait a minute and try again.",
-            )
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="The AI service could not change your plan. Please try again.",
-        )
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="The AI service could not change your plan. Please try again.",
-        ) 
+    except Exception as e:
+        print("Plan adjustment failed:", repr(e))
+        status_code, message = explain_gemini_error(e, "change your study plan")
+        raise HTTPException(status_code=status_code, detail=message)
 
 @router.post("/activate", response_model=ActivatedPlan)
 def activate(

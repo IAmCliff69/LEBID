@@ -86,6 +86,13 @@ export interface StudyPreferencesData {
   break_preference: "short" | "long";
 }
 
+// Gets the student's saved study preferences (null if none saved yet).
+export const getStudyPreferences =
+  async (): Promise<StudyPreferencesData | null> => {
+    const response = await apiClient.get("/users/me/study-preferences");
+    return response.data;
+  };
+
 // Saves (or replaces) the student's study preferences on the server.
 export const saveStudyPreferences = async (
   data: StudyPreferencesData
@@ -99,4 +106,32 @@ export const saveStudyPreferences = async (
 export const completeOnboarding = async (): Promise<User> => {
   const response = await apiClient.post("/users/me/complete-onboarding");
   return response.data;
+};
+
+// =========================================================
+// PROFILE PHOTO (AVATAR)
+// =========================================================
+
+// Upload (or replace) the student's profile photo.
+// The backend resizes it to a small square.
+export const uploadAvatar = async (file: File): Promise<User> => {
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await apiClient.put("/users/me/avatar", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return response.data;
+};
+
+// Download the student's own photo and return a link the <img> tag can use.
+// "version" changes whenever the photo changes, so the browser never shows
+// an old cached picture.
+export const getAvatarUrl = async (
+  version?: string | null
+): Promise<string> => {
+  const response = await apiClient.get("/users/me/avatar", {
+    params: { v: version ?? undefined },
+    responseType: "blob",
+  });
+  return URL.createObjectURL(response.data);
 };

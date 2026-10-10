@@ -4,6 +4,8 @@ import type { TimetableEntry } from "@/api/timetable";
 import { getCourses } from "@/api/courses";
 import type { Course } from "@/api/courses";
 import { updateTimetableEntry } from "@/api/timetable";
+import { TimePicker } from "@/components/ui/time-picker";
+import LectureDatesPanel from "./LectureDatesPanel";
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
@@ -107,24 +109,19 @@ export default function WeeklyTimetableGrid({
   const selectedEntry =
     entries.find((entry) => entry.id === selectedEntryId) ?? null;
 
-  useEffect(() => {
-    if (!selectedEntry) {
-      setIsEditing(false);
-      setSubmitError(null);
-      return;
-    }
-
+  function handleEntryClick(entry: TimetableEntry) {
     setFormValues({
-      day: String(selectedEntry.day_of_week),
-      start_time: selectedEntry.start_time.slice(0, 5),
-      end_time: selectedEntry.end_time.slice(0, 5),
-      class_type: selectedEntry.class_type || "Lecture",
-      venue: selectedEntry.venue || "",
-      lecturer: selectedEntry.lecturer || "",
+      day: String(entry.day_of_week),
+      start_time: entry.start_time.slice(0, 5),
+      end_time: entry.end_time.slice(0, 5),
+      class_type: entry.class_type || "Lecture",
+      venue: entry.venue || "",
+      lecturer: entry.lecturer || "",
     });
     setIsEditing(false);
     setSubmitError(null);
-  }, [selectedEntry]);
+    onEntryClick(entry);
+  }
 
   useEffect(() => {
     const loadCourses = async () => {
@@ -290,7 +287,7 @@ export default function WeeklyTimetableGrid({
             {TIME_SLOTS.map((time) => (
               <div
                 key={time}
-                className="flex items-start justify-end pr-2 pt-2"
+                className="flex items-start justify-end pr-2"
                 style={{
                   height: ROW_HEIGHT,
                 }}
@@ -329,7 +326,7 @@ export default function WeeklyTimetableGrid({
                   <button
                     key={entry.id}
                     type="button"
-                    onClick={() => onEntryClick(entry)}
+                    onClick={() => handleEntryClick(entry)}
                     className="group absolute left-1 right-1 z-10 min-w-0 overflow-hidden rounded-xl border text-left transition-all duration-200 hover:z-30 hover:-translate-y-0.5 hover:shadow-lg focus:outline-none"
                     style={{
                       top: top + 5,
@@ -374,7 +371,7 @@ export default function WeeklyTimetableGrid({
                         )}
                       </div>
 
-                      <p className="mt-1 truncate text-[8px] font-semibold text-foreground sm:text-[9px]">
+                      <p className="mt-0.5 truncate text-[8px] font-semibold text-foreground sm:text-[9px]">
                         {entry.class_type || "Class"}
                       </p>
 
@@ -423,7 +420,7 @@ export default function WeeklyTimetableGrid({
             role="dialog"
             aria-modal="true"
             aria-labelledby="course-details-title"
-            className="w-full max-w-sm overflow-hidden rounded-2xl border bg-card shadow-2xl"
+            className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-2xl border bg-card shadow-2xl"
             style={{
               borderColor: hexToRgba(getCourseColor(selectedEntry), 0.3),
             }}
@@ -514,6 +511,8 @@ export default function WeeklyTimetableGrid({
                       </span>
                     </div>
                   </div>
+                  
+                  <LectureDatesPanel entry={selectedEntry} />
 
                   <div className="mt-4 flex items-center justify-between gap-2">
                     <span
@@ -589,31 +588,27 @@ export default function WeeklyTimetableGrid({
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1.5">
                         <label className="text-xs font-medium text-muted-foreground">Start time</label>
-                        <input
-                          type="time"
+                        <TimePicker
                           value={formValues.start_time}
-                          onChange={(event) =>
+                          onChange={(value) =>
                             setFormValues((prev) => ({
                               ...prev,
-                              start_time: event.target.value,
+                              start_time: value,
                             }))
                           }
-                          className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-primary"
                         />
                       </div>
 
                       <div className="space-y-1.5">
                         <label className="text-xs font-medium text-muted-foreground">End time</label>
-                        <input
-                          type="time"
+                        <TimePicker
                           value={formValues.end_time}
-                          onChange={(event) =>
+                          onChange={(value) =>
                             setFormValues((prev) => ({
                               ...prev,
-                              end_time: event.target.value,
+                              end_time: value,
                             }))
                           }
-                          className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-primary"
                         />
                       </div>
                     </div>

@@ -11,6 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { DatePicker } from "@/components/ui/date-picker";
+import { TimePicker } from "@/components/ui/time-picker";
+
 import {
   Dialog,
   DialogContent,
@@ -171,7 +174,18 @@ export default function EditEventDialog({ event, onEventUpdated }: Props) {
 
           <div className="space-y-1.5">
             <Label htmlFor="eedit_date">Date</Label>
-            <Input id="eedit_date" type="date" {...register("event_date")} />
+            <Controller
+              name="event_date"
+              control={control}
+              render={({ field }) => (
+                <DatePicker
+                  id="eedit_date"
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  invalid={!!errors.event_date}
+                />
+              )}
+            />
             {errors.event_date && (
               <p className="text-destructive text-xs">{errors.event_date.message}</p>
             )}
@@ -183,14 +197,37 @@ export default function EditEventDialog({ event, onEventUpdated }: Props) {
                 Start time{" "}
                 <span className="text-muted-foreground font-normal">(optional)</span>
               </Label>
-              <Input id="eedit_start" type="time" {...register("start_time")} />
+              <Controller
+                name="start_time"
+                control={control}
+                render={({ field }) => (
+                  <TimePicker
+                    id="eedit_start"
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                    clearable
+                  />
+                )}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="eedit_end">
                 End time{" "}
                 <span className="text-muted-foreground font-normal">(optional)</span>
               </Label>
-              <Input id="eedit_end" type="time" {...register("end_time")} />
+              <Controller
+                name="end_time"
+                control={control}
+                render={({ field }) => (
+                  <TimePicker
+                    id="eedit_end"
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                    clearable
+                    invalid={!!errors.end_time}
+                  />
+                )}
+              />
               {errors.end_time && (
                 <p className="text-destructive text-xs">{errors.end_time.message}</p>
               )}

@@ -9,9 +9,13 @@ from app.models.event import Event
 from app.models.study_session import StudySession
 from app.models.notification import Notification
 from app.models.study_preferences import StudyPreferences
+from app.models.user_avatar import UserAvatar
+from app.models.notification_preferences import NotificationPreferences
+from app.models.lecture_occurrence import LectureOccurrence
 
 __all__ = [
     "User", "Course", "TimetableEntry", "TimetableImport",
     "Task", "Assignment", "Exam", "Event", "StudySession", "Notification",
-    "StudyPreferences",
+    "StudyPreferences", "UserAvatar", "NotificationPreferences",
+    "LectureOccurrence",
 ]

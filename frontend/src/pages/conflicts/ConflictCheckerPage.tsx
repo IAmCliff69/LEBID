@@ -6,7 +6,8 @@ import type { ConflictCheckResponse } from "@/api/conflicts";
 import ConflictWarning from "@/components/conflicts/ConflictWarning";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
+import { TimePicker } from "@/components/ui/time-picker";
 import { Label } from "@/components/ui/label";
 
 export default function ConflictCheckerPage() {
@@ -111,31 +112,28 @@ export default function ConflictCheckerPage() {
         <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="cc_date">Date</Label>
-            <Input
+            <DatePicker
               id="cc_date"
-              type="date"
               value={date}
-              onChange={(e) => { setDate(e.target.value); setResult(null); }}
+              onChange={(value) => { setDate(value); setResult(null); }}
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="cc_start">Start time</Label>
-              <Input
+              <TimePicker
                 id="cc_start"
-                type="time"
                 value={startTime}
-                onChange={(e) => { setStartTime(e.target.value); setResult(null); }}
+                onChange={(value) => { setStartTime(value); setResult(null); }}
               />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="cc_end">End time</Label>
-              <Input
+              <TimePicker
                 id="cc_end"
-                type="time"
                 value={endTime}
-                onChange={(e) => { setEndTime(e.target.value); setResult(null); }}
+                onChange={(value) => { setEndTime(value); setResult(null); }}
               />
             </div>
           </div>
@@ -160,11 +158,10 @@ export default function ConflictCheckerPage() {
         <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="cc_day">Date</Label>
-            <Input
+            <DatePicker
               id="cc_day"
-              type="date"
               value={dayDate}
-              onChange={(e) => { setDayDate(e.target.value); setResult(null); }}
+              onChange={(value) => { setDayDate(value); setResult(null); }}
             />
           </div>
 

@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { GraduationCap } from "lucide-react";
-
+import { toast } from "sonner";
 import { getExams, deleteExam } from "@/api/exams";
 import type { Exam } from "@/api/exams";
 import { getCourses } from "@/api/courses";
 import type { Course } from "@/api/courses";
-
+import { useHighlightItem } from "@/hooks/useHighlightItem";
 import AddExamDialog from "@/components/exams/AddExamDialog";
 import EditExamDialog from "@/components/exams/EditExamDialog";
 import { Button } from "@/components/ui/button";
@@ -40,6 +40,7 @@ export default function ExamsPage() {
   const [exams, setExams] = useState<Exam[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  useHighlightItem(!isLoading);
   const [error, setError] = useState<string | null>(null);
 
   // Per-card delete state
@@ -70,7 +71,7 @@ export default function ExamsPage() {
   const getCourse = (courseId: string) =>
     courses.find((c) => String(c.id) === String(courseId));
 
-  const handleExamAdded = (exam: Exam) => {
+    const handleExamAdded = (exam: Exam) => {
     setExams((prev) =>
       [...prev, exam].sort(
         (a, b) =>
@@ -78,6 +79,7 @@ export default function ExamsPage() {
           new Date(b.exam_date).getTime()
       )
     );
+    toast.success("Exam added", { description: exam.title });
   };
 
   const handleExamUpdated = (updated: Exam) => {
@@ -90,6 +92,7 @@ export default function ExamsPage() {
             new Date(b.exam_date).getTime()
         )
     );
+    toast.success("Exam updated", { description: updated.title });
   };
 
   const handleDeleteConfirm = async (exam: Exam) => {
@@ -99,6 +102,7 @@ export default function ExamsPage() {
       await deleteExam(exam.id);
       setExams((prev) => prev.filter((e) => e.id !== exam.id));
       setConfirmingDeleteId(null);
+      toast.success("Exam deleted", { description: exam.title });
     } catch {
       setDeleteError("Failed to delete exam. Please try again.");
     } finally {
@@ -252,7 +256,8 @@ function ExamCard({
         : "text-primary bg-primary/10 border-primary/20";
 
   return (
-    <div
+      <div
+      data-item-id={exam.id}
       className={`bg-card border border-border rounded-xl px-4 py-4 ${
         isPast ? "opacity-60" : ""
       }`}

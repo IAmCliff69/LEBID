@@ -89,5 +89,14 @@ class Task(Base):
     user: Mapped["User"] = relationship("User", back_populates="tasks")  # type: ignore
     course: Mapped["Course | None"] = relationship("Course", back_populates="tasks")  # type: ignore
 
+        # Handy shortcuts so API responses can include the course's code and colour
+    @property
+    def course_code(self) -> str | None:
+        return self.course.code if self.course else None
+
+    @property
+    def course_color(self) -> str | None:
+        return self.course.color if self.course else None
+
     def __repr__(self) -> str:
         return f"<Task id={self.id} title={self.title} status={self.status}>"

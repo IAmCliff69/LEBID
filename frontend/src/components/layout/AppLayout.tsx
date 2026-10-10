@@ -3,7 +3,8 @@ import type { ReactNode } from "react";
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
 import ThemeToggle from "./ThemeToggle";
-import FloatingAiButton from "@/components/ai/FloatingAiButton";  // ← add
+import FloatingAiButton from "@/components/ai/FloatingAiButton"; 
+import LoginReminders from "@/components/reminders/LoginReminders";
 
 interface AppLayoutProps {
   title: string;
@@ -36,6 +37,7 @@ export default function AppLayout({
       {/* Floating AI assistant — available on every protected page */}
       <FloatingAiButton />
       <ThemeToggle />
+      <LoginReminders />
     </div>
   );
 }

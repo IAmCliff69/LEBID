@@ -8,6 +8,7 @@ import ProtectedRoute from "@/components/common/ProtectedRoute";
 import PublicOnlyRoute from "@/components/common/PublicOnlyRoute";
 import AppLayout from "@/components/layout/AppLayout";
 import SplashScreen from "@/components/splash/SplashScreen";
+import { Toaster } from "@/components/ui/sonner";
 import NotificationsPage from "@/pages/notifications/NotificationsPage";
 import type { User } from "@/api/auth";
 import OnboardingSignOut from "@/components/onboarding/OnboardingSignOut";
@@ -36,12 +37,16 @@ import PlanBuildingPage from "@/pages/onboarding/PlanBuildingPage";
 import PlanReviewPage from "@/pages/onboarding/PlanReviewPage";
 import StudyVenuesPage from "@/pages/onboarding/StudyVenuesPage";
 import FinishSetupPage from "@/pages/onboarding/FinishSetupPage";
+import SettingsPage from "@/pages/settings/SettingsPage";
+import LectureMarksPage from "@/pages/lectures/LectureMarksPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
-      staleTime: 1000 * 60 * 5,
+      // Data is always re-checked when a page opens, so things added
+      // elsewhere in the app show up straight away.
+      staleTime: 0,
     },
   },
 });
@@ -185,6 +190,16 @@ function AppRoutes() {
             </ProtectedLayout>
           }
         />
+        
+                <Route
+          path="/settings"
+          element={
+            <ProtectedLayout title="Settings">
+              <SettingsPage />
+            </ProtectedLayout>
+          }
+        />
+        
         <Route
           path="/timetable-import"
           element={
@@ -217,6 +232,24 @@ function AppRoutes() {
           element={
             <ProtectedLayout title="Conflict Checker">
               <ConflictCheckerPage />
+            </ProtectedLayout>
+          }
+        />
+
+        <Route
+          path="/missed-lectures"
+          element={
+            <ProtectedLayout title="Missed Lectures">
+              <LectureMarksPage key="missed" status="missed" />
+            </ProtectedLayout>
+          }
+        />
+
+        <Route
+          path="/cancelled-lectures"
+          element={
+            <ProtectedLayout title="Cancelled Lectures">
+              <LectureMarksPage key="cancelled" status="cancelled" />
             </ProtectedLayout>
           }
         />
@@ -298,6 +331,7 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <AppRoutes />
+        <Toaster />
       </AuthProvider>
     </QueryClientProvider>
   );

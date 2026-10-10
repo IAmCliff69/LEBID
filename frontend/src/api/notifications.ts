@@ -1,5 +1,7 @@
 import apiClient from "./client";
 
+export const NOTIFICATIONS_UPDATED_EVENT = "lebid:notifications-updated";
+
 export interface AppNotification {
   id: string;
   user_id: string;
@@ -51,4 +53,23 @@ export const deleteNotification = async (id: string): Promise<void> => {
 
 export const clearAllNotifications = async (): Promise<void> => {
   await apiClient.delete("/notifications");
+};
+
+export interface NotificationPreferences {
+  deadline_reminders: boolean;
+  exam_reminders: boolean;
+  missed_session_alerts: boolean;
+}
+
+export const getNotificationPreferences =
+  async (): Promise<NotificationPreferences> => {
+    const response = await apiClient.get("/notifications/preferences");
+    return response.data;
+  };
+
+export const saveNotificationPreferences = async (
+  data: NotificationPreferences
+): Promise<NotificationPreferences> => {
+  const response = await apiClient.put("/notifications/preferences", data);
+  return response.data;
 };

@@ -104,5 +104,22 @@ class User(Base):
         cascade="all, delete-orphan",
     )
 
+    avatar: Mapped["UserAvatar"] = relationship(  # type: ignore
+        "UserAvatar",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )
+
+    @property
+    def has_avatar(self) -> bool:
+        """True if the student has uploaded a profile photo."""
+        return self.avatar is not None
+
+    @property
+    def avatar_updated_at(self) -> datetime | None:
+        """When the photo last changed (the app uses it to refresh the picture)."""
+        return self.avatar.updated_at if self.avatar else None
+    
     def __repr__(self) -> str:
         return f"<User id={self.id} email={self.email}>"

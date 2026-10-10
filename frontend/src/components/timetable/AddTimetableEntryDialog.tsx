@@ -19,6 +19,7 @@ import type { Course } from "@/api/courses";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TimePicker } from "@/components/ui/time-picker";
 
 import {
   Dialog,
@@ -182,7 +183,7 @@ export default function AddTimetableEntryDialog({
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-h-[90vh] overflow-y-auto rounded-2xl sm:max-w-lg">
+      <DialogContent>
         <DialogHeader>
           <div className="mb-2 flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
             <CalendarDays className="size-5" />
@@ -320,11 +321,17 @@ export default function AddTimetableEntryDialog({
                   Start time
                 </Label>
 
-                <Input
-                  id="start_time"
-                  type="time"
-                  className="rounded-xl bg-background"
-                  {...register("start_time")}
+                <Controller
+                  name="start_time"
+                  control={control}
+                  render={({ field }) => (
+                    <TimePicker
+                      id="start_time"
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      invalid={!!errors.start_time}
+                    />
+                  )}
                 />
 
                 {errors.start_time && (
@@ -339,11 +346,17 @@ export default function AddTimetableEntryDialog({
                   End time
                 </Label>
 
-                <Input
-                  id="end_time"
-                  type="time"
-                  className="rounded-xl bg-background"
-                  {...register("end_time")}
+                <Controller
+                  name="end_time"
+                  control={control}
+                  render={({ field }) => (
+                    <TimePicker
+                      id="end_time"
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      invalid={!!errors.end_time}
+                    />
+                  )}
                 />
 
                 {errors.end_time && (
@@ -451,7 +464,7 @@ export default function AddTimetableEntryDialog({
 
           {/* Actions */}
 
-          <div className="flex justify-end gap-3 border-t border-border pt-5">
+          <div className="flex justify-end gap-3 pt-2">
             <Button
               type="button"
               variant="outline"

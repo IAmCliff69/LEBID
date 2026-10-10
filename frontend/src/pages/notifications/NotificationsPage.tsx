@@ -4,6 +4,7 @@ import { Bell, RefreshCw, CheckCheck, Trash2 } from "lucide-react";
 import {
   getNotifications,
   generateNotifications,
+  NOTIFICATIONS_UPDATED_EVENT,
   markAsRead,
   markAllAsRead,
   deleteNotification,
@@ -87,6 +88,7 @@ export default function NotificationsPage() {
       try {
         const data = await getNotifications({ unread_only: unreadOnly });
         setNotifications(data);
+        setError(null);
       } catch {
         setError("Failed to load notifications.");
       }
@@ -95,8 +97,22 @@ export default function NotificationsPage() {
   );
 
   useEffect(() => {
-    setIsLoading(true);
-    load().finally(() => setIsLoading(false));
+    void Promise.resolve()
+      .then(() => load())
+      .finally(() => setIsLoading(false));
+
+    const refreshList = () => {
+      void load();
+    };
+    const interval = window.setInterval(refreshList, 60_000);
+    window.addEventListener("focus", refreshList);
+    window.addEventListener(NOTIFICATIONS_UPDATED_EVENT, refreshList);
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refreshList);
+      window.removeEventListener(NOTIFICATIONS_UPDATED_EVENT, refreshList);
+    };
   }, [load]);
 
   const handleGenerate = async () => {
@@ -281,8 +297,7 @@ export default function NotificationsPage() {
             {showUnreadOnly ? "No unread notifications" : "No notifications"}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Click "Check now" to scan your schedule for anything that needs
-            attention.
+            New notifications are checked automatically and will appear here.
           </p>
         </div>
       )}

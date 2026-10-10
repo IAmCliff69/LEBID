@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-
+from fastapi import Response
 import bcrypt
 from jose import JWTError, jwt
 
@@ -68,3 +68,32 @@ def decode_access_token(token: str) -> str | None:
         return user_id
     except JWTError:
         return None
+
+def decode_token_payload(token: str) -> dict | None:
+    """
+    Decode and verify a JWT and return everything inside it
+    (including the expiry time). Returns None if it is invalid or expired.
+    """
+    try:
+        return jwt.decode(
+            token,
+            settings.jwt_secret_key,
+            algorithms=[settings.jwt_algorithm],
+        )
+    except JWTError:
+        return None
+
+
+def set_auth_cookie(response: Response, token: str) -> None:
+    """
+    Store the login token in an HttpOnly cookie. Used by login and by the
+    automatic session renewal, so both always use the same settings.
+    """
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,       # JavaScript cannot read this cookie
+        secure=False,        # Set to True in production (requires HTTPS)
+        samesite="lax",      # Protects against CSRF
+        max_age=settings.jwt_access_token_expire_minutes * 60,
+    )    

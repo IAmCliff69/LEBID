@@ -5,6 +5,7 @@ import type {
   GeneratedStudyPlan,
   PlannedStudySession,
 } from "@/api/studyPlan";
+import { TimePicker } from "@/components/ui/time-picker";
 
 const DAY_NAMES = [
   "Monday",
@@ -226,16 +227,13 @@ export default function StudySessionEditor({
           <label htmlFor={`${id}-start`} className={labelClass}>
             Start
           </label>
-          <input
+          <TimePicker
             id={`${id}-start`}
-            type="time"
-            step={900}
             value={start}
-            onChange={(e) => {
-              setStart(e.target.value);
+            onChange={(value) => {
+              setStart(value);
               setError(null);
             }}
-            className={fieldClass}
           />
         </div>
 
@@ -243,16 +241,13 @@ export default function StudySessionEditor({
           <label htmlFor={`${id}-end`} className={labelClass}>
             End
           </label>
-          <input
+          <TimePicker
             id={`${id}-end`}
-            type="time"
-            step={900}
             value={end}
-            onChange={(e) => {
-              setEnd(e.target.value);
+            onChange={(value) => {
+              setEnd(value);
               setError(null);
             }}
-            className={fieldClass}
           />
         </div>
       </div>

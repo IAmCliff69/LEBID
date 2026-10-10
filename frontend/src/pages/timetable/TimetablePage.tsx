@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
-
+import ConfirmDialog from "@/components/common/ConfirmDialog";
+import { Link } from "react-router-dom";
 import { CalendarDays, Clock3 } from "lucide-react";
+import { toast } from "sonner";
 
 import WeeklyTimetableGrid from "@/components/timetable/WeeklyTimetableGrid";
 import AddTimetableEntryDialog from "@/components/timetable/AddTimetableEntryDialog";
@@ -12,6 +14,8 @@ export default function TimetablePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedEntryId, setSelectedEntryId] = useState<number | null>(null);
+  const [entryToDelete, setEntryToDelete] = useState<TimetableEntry | null>(null);
+  const [isDeletingEntry, setIsDeletingEntry] = useState(false);
 
   useEffect(() => {
     const fetchTimetable = async () => {
@@ -28,8 +32,11 @@ export default function TimetablePage() {
     fetchTimetable();
   }, []);
 
-  const handleEntryAdded = (entry: TimetableEntry) => {
+    const handleEntryAdded = (entry: TimetableEntry) => {
     setEntries((prev) => [...prev, entry]);
+    toast.success("Class added", {
+      description: `${entry.course_code} ${entry.class_type}`,
+    });
   };
 
   const handleEntryUpdated = (updated: TimetableEntry) => {
@@ -37,28 +44,50 @@ export default function TimetablePage() {
       prev.map((entry) => (entry.id === updated.id ? updated : entry))
     );
     setSelectedEntryId(null);
+    toast.success("Class updated", {
+      description: `${updated.course_code} ${updated.class_type}`,
+    });
   };
 
-  const handleDelete = async (entry: TimetableEntry) => {
-    if (
-      !confirm(
-        `Delete this ${entry.class_type} for ${entry.course_code}? This cannot be undone.`
-      )
-    ) {
-      return;
-    }
+    // Step 1: the delete button only opens the confirmation dialog.
+  const handleDelete = (entry: TimetableEntry) => {
+    setEntryToDelete(entry);
+  };
 
+  // Step 2: runs when the student confirms in the dialog.
+  const confirmDelete = async () => {
+    if (!entryToDelete) return;
+    const entry = entryToDelete;
+
+    setIsDeletingEntry(true);
     try {
       await deleteTimetableEntry(entry.id);
       setEntries((prev) => prev.filter((item) => item.id !== entry.id));
       setSelectedEntryId(null);
+      toast.success("Class deleted", {
+        description: `${entry.course_code} ${entry.class_type}`,
+      });
     } catch {
-      alert("Failed to delete entry. Please try again.");
+      toast.error("Couldn't delete the class", {
+        description: "Please try again.",
+      });
+    } finally {
+      setIsDeletingEntry(false);
+      setEntryToDelete(null);
     }
   };
 
   return (
     <>
+      <ConfirmDialog
+        open={entryToDelete !== null}
+        title="Delete this class?"
+        description={`This ${entryToDelete?.class_type ?? "class"} for ${entryToDelete?.course_code ?? "this course"} will be removed from your timetable. This cannot be undone.`}
+        confirmLabel="Delete class"
+        isLoading={isDeletingEntry}
+        onConfirm={confirmDelete}
+        onCancel={() => setEntryToDelete(null)}
+      />
       <div className="mx-auto max-w-350 space-y-8">
         <section className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -75,7 +104,21 @@ export default function TimetablePage() {
             </p>
           </div>
 
-          <AddTimetableEntryDialog onEntryAdded={handleEntryAdded} />
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              to="/missed-lectures"
+              className="inline-flex h-9 items-center rounded-xl border border-border px-3 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
+            >
+              Missed lectures
+            </Link>
+            <Link
+              to="/cancelled-lectures"
+              className="inline-flex h-9 items-center rounded-xl border border-border px-3 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
+            >
+              Cancelled lectures
+            </Link>
+            <AddTimetableEntryDialog onEntryAdded={handleEntryAdded} />
+          </div>
         </section>
 
         {!isLoading && !error && (

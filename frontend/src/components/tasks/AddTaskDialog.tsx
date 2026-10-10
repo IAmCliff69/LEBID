@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DateTimePicker } from "@/components/ui/date-picker";
 import { Plus } from "lucide-react";
 
 const PRIORITIES = [
@@ -74,13 +75,13 @@ export default function AddTaskDialog({ onTaskAdded }: Props) {
   const onSubmit = async (data: FormData) => {
     setServerError(null);
     try {
-      const task = await createTask({
+            const task = await createTask({
         title: data.title,
         description: data.description || null,
-        course_id: data.course_id ? parseInt(data.course_id) : null,
+        course_id: data.course_id || null,
         deadline: data.deadline || null,
         priority: data.priority as Task["priority"],
-        estimated_duration: data.estimated_duration
+        estimated_duration_minutes: data.estimated_duration
           ? parseInt(data.estimated_duration)
           : null,
         notes: data.notes || null,
@@ -179,10 +180,18 @@ export default function AddTaskDialog({ onTaskAdded }: Props) {
                 Deadline{" "}
                 <span className="text-muted-foreground font-normal">(optional)</span>
               </Label>
-              <Input
-                id="deadline"
-                type="datetime-local"
-                {...register("deadline")}
+              <Controller
+                name="deadline"
+                control={control}
+                render={({ field }) => (
+                  <DateTimePicker
+                    id="deadline"
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                    placeholder="Pick date and time"
+                    clearable
+                  />
+                )}
               />
             </div>
 

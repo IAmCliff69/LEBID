@@ -24,14 +24,19 @@ export interface AiChatResponse {
 
 export const sendAiMessage = async (
   message: string,
-  conversationHistory: ConversationMessage[] = []
+  conversationHistory: ConversationMessage[] = [],
+  signal?: AbortSignal
 ): Promise<AiChatResponse> => {
-  const response = await apiClient.post("/ai/chat", {
-    message,
-    conversation_history: conversationHistory.map((m) => ({
-      role: m.role,
-      content: m.content,
-    })),
-  });
+  const response = await apiClient.post(
+    "/ai/chat",
+    {
+      message,
+      conversation_history: conversationHistory.map((m) => ({
+        role: m.role,
+        content: m.content,
+      })),
+    },
+    { signal }
+  );
   return response.data;
 };

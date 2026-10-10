@@ -7,12 +7,21 @@ import {
   SquarePen,
   Trash2,
   MessageSquare,
+  Square,
+  Pencil,
+  RotateCcw,
+  X,
+  Mic,
 } from "lucide-react";
 import { marked } from "marked";
 import { sendAiMessage } from "@/api/ai";
 import type { ConversationMessage, AiRecommendation } from "@/api/ai";
 import { createStudySession } from "@/api/studySessions";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/context/AuthContext";
+import { toast } from "sonner";
+import { useSpeechToText } from "@/hooks/useSpeechToText";
+import type { SpeechError } from "@/hooks/useSpeechToText";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -34,7 +43,11 @@ interface SavedConversation {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const STORAGE_KEY = "lebid_ai_conversations";
+// The OLD key was shared by every account in the same browser (the privacy leak).
+const LEGACY_STORAGE_KEY = "lebid_ai_conversations";
+
+// Each user now gets their own key, built from their user id.
+const getStorageKey = (userId: string) => `lebid_ai_conversations_${userId}`;
 const MAX_STORED = 30;
 
 const SUGGESTIONS = [
@@ -47,20 +60,23 @@ const SUGGESTIONS = [
 
 // ─── localStorage helpers ─────────────────────────────────────────────────────
 
-function loadConversations(): SavedConversation[] {
+function loadConversations(storageKey: string): SavedConversation[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(storageKey);
     return raw ? (JSON.parse(raw) as SavedConversation[]) : [];
   } catch {
     return [];
   }
 }
 
-function saveConversations(convos: SavedConversation[]): void {
+function saveConversations(
+  storageKey: string,
+  convos: SavedConversation[]
+): void {
   try {
     // Keep only the most recent MAX_STORED conversations
     const trimmed = convos.slice(0, MAX_STORED);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+    localStorage.setItem(storageKey, JSON.stringify(trimmed));
   } catch {
     // localStorage full — silently ignore
   }
@@ -215,11 +231,51 @@ function RecommendationCard({ rec }: { rec: AiRecommendation }) {
 }
 
 // ─── Main page ────────────────────────────────────────────────────────────────
+// Turns a failed request into a sentence a student can understand.
+function getFriendlyAiError(err: unknown): string {
+  const error = err as { response?: { data?: { detail?: unknown } } };
+
+  // No reply at all: the request never reached the server
+  if (!error.response) {
+    return "We couldn't reach Lebid. Please check your internet connection and try again.";
+  }
+
+  const detail = error.response.data?.detail;
+  if (
+    typeof detail === "string" &&
+    detail.trim() !== "" &&
+    !detail.startsWith("AI service error")
+  ) {
+    return detail;
+  }
+  return "The AI assistant couldn't answer just now. Please try again in a moment.";
+}
+
+const SPEECH_ERROR_MESSAGES: Record<SpeechError, [string, string]> = {
+  blocked: [
+    "Microphone access is blocked",
+    "Allow the microphone for this site in your browser settings, then try again.",
+  ],
+  "no-microphone": [
+    "No microphone found",
+    "Plug in or enable a microphone and try again.",
+  ],
+  "no-speech": ["We didn't hear anything", "Tap the mic and try again."],
+  network: [
+    "Voice input needs an internet connection",
+    "Check your connection and try again.",
+  ],
+  other: ["Voice input stopped", "Please try again, or type your message."],
+};
 
 export default function AiAssistantPage() {
   // All saved conversations, newest first
+    const { user } = useAuth();
+  const storageKey = getStorageKey(user?.id ?? "unknown");
+
+  // All saved conversations for THIS user only, newest first
   const [conversations, setConversations] = useState<SavedConversation[]>(
-    () => loadConversations()
+    () => loadConversations(storageKey)
   );
 
   // The active conversation ID (null = brand-new, unsaved)
@@ -230,7 +286,48 @@ export default function AiAssistantPage() {
 
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+    // Lets the Stop button cancel the request that is waiting for an answer
+  const abortRef = useRef<AbortController | null>(null);
+  // Which of the student's messages is being edited (an index in `chat`)
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  // Which message has its long-press menu open (touch screens)
+  const [menuIndex, setMenuIndex] = useState<number | null>(null);
+  const pressTimerRef = useRef<number | null>(null);
+    // Voice input
+  const voiceBaseRef = useRef(""); // what was in the box when dictation started
+  const voiceActiveRef = useRef(false); // false once the message is sent
 
+  const resizeTextarea = () => {
+    const box = textareaRef.current;
+    if (!box) return;
+    box.style.height = "auto";
+    box.style.height = `${Math.min(box.scrollHeight, 140)}px`;
+  };
+
+  const speech = useSpeechToText({
+    onText: (spoken) => {
+      // Ignore words that arrive after the message was already sent
+      if (!voiceActiveRef.current) return;
+      const base = voiceBaseRef.current.trimEnd();
+      const next = base ? `${base} ${spoken.trimStart()}` : spoken.trimStart();
+      setInput(next);
+      requestAnimationFrame(resizeTextarea);
+    },
+    onError: (error) => {
+      const [title, description] = SPEECH_ERROR_MESSAGES[error];
+      toast.error(title, { description });
+    },
+  });
+
+  const toggleVoice = () => {
+    if (speech.isListening) {
+      speech.stop();
+      return;
+    }
+    voiceBaseRef.current = input;
+    voiceActiveRef.current = true;
+    speech.start();
+  };
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -240,9 +337,14 @@ export default function AiAssistantPage() {
   }, [chat, isLoading]);
 
   // Persist conversations to localStorage when their state changes.
+    useEffect(() => {
+    saveConversations(storageKey, conversations);
+  }, [storageKey, conversations]);
+
+  // One-time cleanup: delete the old shared history that every account could see.
   useEffect(() => {
-    saveConversations(conversations);
-  }, [conversations]);
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
+  }, []);
 
   // ── Conversation management ────────────────────────────────────────────────
 
@@ -250,16 +352,20 @@ export default function AiAssistantPage() {
     setActiveId(null);
     setChat([]);
     setInput("");
+    setEditingIndex(null);
+    setMenuIndex(null);
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
-  }, []);
+  }, [setMenuIndex]);
 
   const loadConversation = useCallback((convo: SavedConversation) => {
     setActiveId(convo.id);
     setChat(convo.messages);
     setInput("");
-  }, []);
+    setEditingIndex(null);
+    setMenuIndex(null);
+  }, [setMenuIndex]);
 
   const deleteConversation = useCallback(
     (id: string, e: React.MouseEvent) => {
@@ -274,20 +380,27 @@ export default function AiAssistantPage() {
 
   // ── Chat logic ─────────────────────────────────────────────────────────────
 
-  const buildHistory = (): ConversationMessage[] =>
-    chat
+    const buildHistory = (messages: ChatEntry[]): ConversationMessage[] =>
+    messages
       .filter((e) => !e.error)
       .map((e) => ({
         role: e.role === "user" ? "user" : "model",
         content: e.content,
       }));
 
-  const send = async (message: string) => {
+  // replaceFrom: when editing or re-asking, the index of the message being
+  // replaced. That message and everything after it is dropped first.
+  const send = async (message: string, replaceFrom: number | null = null) => {
     const trimmed = message.trim();
     if (!trimmed || isLoading) return;
+        // Sending ends any voice input in progress
+    voiceActiveRef.current = false;
+    speech.stop();
 
+    const baseMessages =
+      replaceFrom === null ? chat : chat.slice(0, replaceFrom);
     const userEntry: ChatEntry = { role: "user", content: trimmed };
-    const nextMessages = [...chat, userEntry];
+    const nextMessages = [...baseMessages, userEntry];
 
     // Create a new conversation ID on the very first message
     const currentId = activeId ?? generateId();
@@ -310,14 +423,20 @@ export default function AiAssistantPage() {
 
     setChat(nextMessages);
     setInput("");
+    requestAnimationFrame(resizeTextarea);
+    setEditingIndex(null);
+    setMenuIndex(null);
     setIsLoading(true);
 
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-    }
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     try {
-      const result = await sendAiMessage(trimmed, buildHistory());
+      const result = await sendAiMessage(
+        trimmed,
+        buildHistory(baseMessages),
+        controller.signal
+      );
       const assistantEntry: ChatEntry = {
         role: "assistant",
         content: result.message,
@@ -326,34 +445,99 @@ export default function AiAssistantPage() {
       };
       const updatedMessages = [...nextMessages, assistantEntry];
       const updatedAt = getCurrentTime();
-      setChat((prev) => [...prev, assistantEntry]);
+      setChat(updatedMessages);
       setConversations((prev) =>
         updateConversation(prev, currentId, updatedMessages, updatedAt)
       );
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { detail?: string } } };
+      // The student pressed Stop: take the question back out of the chat and
+      // put it in the text box so it can be changed and sent again.
+      if (controller.signal.aborted) {
+        setInput(trimmed);
+        setChat(baseMessages);
+        if (baseMessages.length === 0) {
+          setConversations((prev) => prev.filter((c) => c.id !== currentId));
+          setActiveId(null);
+        } else {
+          setConversations((prev) =>
+            updateConversation(prev, currentId, baseMessages, getCurrentTime())
+          );
+        }
+        return;
+      }
+
       const errorEntry: ChatEntry = {
         role: "assistant",
-        content:
-          error.response?.data?.detail ??
-          "Something went wrong. Please try again.",
+        content: getFriendlyAiError(err),
         error: true,
       };
       const updatedMessages = [...nextMessages, errorEntry];
       const updatedAt = getCurrentTime();
-      setChat((prev) => [...prev, errorEntry]);
+      setChat(updatedMessages);
       setConversations((prev) =>
         updateConversation(prev, currentId, updatedMessages, updatedAt)
       );
     } finally {
+      abortRef.current = null;
       setIsLoading(false);
+    }
+  };
+
+  // Stop button: stop waiting for the answer
+  const stopGenerating = () => {
+    abortRef.current?.abort();
+  };
+
+  // Ask the same question again (replaces the old answer)
+  const rerun = (index: number) => {
+    void send(chat[index].content, index);
+  };
+
+  // Put a message back in the text box to change it
+  const startEdit = (index: number) => {
+    setMenuIndex(null);
+    setEditingIndex(index);
+    setInput(chat[index].content);
+    requestAnimationFrame(() => {
+      const box = textareaRef.current;
+      if (!box) return;
+      box.focus();
+      box.style.height = "auto";
+      box.style.height = `${Math.min(box.scrollHeight, 140)}px`;
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingIndex(null);
+    setInput("");
+    requestAnimationFrame(resizeTextarea);
+  };
+
+  // "Try again" under an error: re-ask the question that came before it
+  const retryAfterError = (errorIndex: number) => {
+    if (errorIndex > 0) void send(chat[errorIndex - 1].content, errorIndex - 1);
+  };
+
+  // Touch screens: press and hold one of your messages for the menu
+  const startPress = (event: React.PointerEvent, index: number) => {
+    if (event.pointerType === "mouse") return;
+    pressTimerRef.current = window.setTimeout(() => {
+      setMenuIndex(index);
+      navigator.vibrate?.(15);
+    }, 500);
+  };
+
+  const cancelPress = () => {
+    if (pressTimerRef.current !== null) {
+      window.clearTimeout(pressTimerRef.current);
+      pressTimerRef.current = null;
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      send(input);
+      send(input, editingIndex);
     }
   };
 
@@ -524,67 +708,152 @@ export default function AiAssistantPage() {
               </div>
             )}
 
-            {/* Chat messages */}
-            {chat.map((entry, i) => (
-              <div
-                key={i}
-                className={`flex ${entry.role === "user" ? "justify-end" : "justify-start"}`}
-              >
-                <div
-                  className={`flex max-w-[85%] flex-col space-y-3 ${
-                    entry.role === "user" ? "items-end" : "items-start"
-                  }`}
-                >
-                <div
-                  className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-                    entry.role === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : entry.error
-                        ? "border border-destructive/20 bg-destructive/10 text-destructive"
-                        : "border border-border bg-card text-foreground shadow-sm"
-                  }`}
-                >
-                  {entry.role === "user" || entry.error ? (
-                    // User messages and errors stay as plain text
-                    entry.content.split("\n").map((line, j) => (
-                      <span key={j}>
-                        {line}
-                        {j < entry.content.split("\n").length - 1 && <br />}
-                      </span>
-                    ))
-                  ) : (
-                    // AI responses render as markdown
-                    <MarkdownMessage content={entry.content} />
-                  )}
-                </div>
+                        {/* Chat messages */}
+            {chat.map((entry, i) => {
+              const isUser = entry.role === "user";
+              const canAct = isUser && !isLoading;
 
-                  {entry.insights && entry.insights.length > 0 && (
-                    <div className="w-full space-y-1.5">
-                      {entry.insights.map((insight, j) => (
-                        <div
-                          key={j}
-                          className="flex items-start gap-2 rounded-xl border border-warning/20 bg-warning/10 px-3 py-2 text-xs text-warning"
-                        >
-                          <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
-                          {insight}
+              return (
+                <div
+                  key={i}
+                  className={`flex ${isUser ? "justify-end" : "justify-start"}`}
+                >
+                  <div
+                    className={`flex max-w-[85%] flex-col space-y-3 ${
+                      isUser ? "items-end" : "items-start"
+                    }`}
+                  >
+                    <div className="group relative flex items-start gap-2">
+                      {/* Mouse: buttons appear when you hover over your message */}
+                      {canAct && (
+                        <div className="mt-1.5 hidden shrink-0 items-center gap-1 opacity-0 transition focus-within:opacity-100 group-hover:opacity-100 md:flex">
+                          <button
+                            type="button"
+                            onClick={() => startEdit(i)}
+                            title="Edit message"
+                            aria-label="Edit message"
+                            className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => rerun(i)}
+                            title="Ask again"
+                            aria-label="Ask again"
+                            className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                          >
+                            <RotateCcw className="h-3.5 w-3.5" />
+                          </button>
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      )}
 
-                  {entry.recommendations && entry.recommendations.length > 0 && (
-                    <div className="w-full space-y-2">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                        Recommendations
-                      </p>
-                      {entry.recommendations.map((rec, j) => (
-                        <RecommendationCard key={j} rec={rec} />
-                      ))}
+                      <div
+                        onPointerDown={
+                          canAct ? (event) => startPress(event, i) : undefined
+                        }
+                        onPointerUp={canAct ? cancelPress : undefined}
+                        onPointerLeave={canAct ? cancelPress : undefined}
+                        onPointerCancel={canAct ? cancelPress : undefined}
+                        onContextMenu={
+                          canAct ? (event) => event.preventDefault() : undefined
+                        }
+                        className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                          isUser
+                            ? "bg-primary text-primary-foreground pointer-coarse:select-none"
+                            : entry.error
+                              ? "border border-destructive/20 bg-destructive/10 text-destructive"
+                              : "border border-border bg-card text-foreground shadow-sm"
+                        }`}
+                      >
+                        {isUser || entry.error ? (
+                          // User messages and errors stay as plain text
+                          entry.content.split("\n").map((line, j) => (
+                            <span key={j}>
+                              {line}
+                              {j < entry.content.split("\n").length - 1 && (
+                                <br />
+                              )}
+                            </span>
+                          ))
+                        ) : (
+                          // AI responses render as markdown
+                          <MarkdownMessage content={entry.content} />
+                        )}
+                      </div>
+
+                      {/* Touch screens: the menu that opens after a long press */}
+                      {menuIndex === i && (
+                        <div className="absolute right-0 top-full z-20 mt-1 flex w-40 flex-col overflow-hidden rounded-xl border border-border bg-card text-foreground shadow-lg">
+                          <button
+                            type="button"
+                            onClick={() => startEdit(i)}
+                            className="flex items-center gap-2 px-3 py-2.5 text-left text-xs font-medium transition hover:bg-muted"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            Edit message
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => rerun(i)}
+                            className="flex items-center gap-2 px-3 py-2.5 text-left text-xs font-medium transition hover:bg-muted"
+                          >
+                            <RotateCcw className="h-3.5 w-3.5" />
+                            Ask again
+                          </button>
+                        </div>
+                      )}
                     </div>
-                  )}
+
+                    {/* A failed answer: offer to try again */}
+                    {entry.error && i > 0 && !isLoading && (
+                      <button
+                        type="button"
+                        onClick={() => retryAfterError(i)}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-secondary-foreground transition hover:bg-muted"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                        Try again
+                      </button>
+                    )}
+
+                    {entry.insights && entry.insights.length > 0 && (
+                      <div className="w-full space-y-1.5">
+                        {entry.insights.map((insight, j) => (
+                          <div
+                            key={j}
+                            className="flex items-start gap-2 rounded-xl border border-warning/20 bg-warning/10 px-3 py-2 text-xs text-warning"
+                          >
+                            <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
+                            {insight}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {entry.recommendations &&
+                      entry.recommendations.length > 0 && (
+                        <div className="w-full space-y-2">
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                            Recommendations
+                          </p>
+                          {entry.recommendations.map((rec, j) => (
+                            <RecommendationCard key={j} rec={rec} />
+                          ))}
+                        </div>
+                      )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
+
+            {/* Tap anywhere else to close the long-press menu */}
+            {menuIndex !== null && (
+              <div
+                className="fixed inset-0 z-10"
+                onClick={() => setMenuIndex(null)}
+              />
+            )}
 
             {/* Loading dots */}
             {isLoading && (
@@ -610,6 +879,22 @@ export default function AiAssistantPage() {
         {/* Input bar */}
         <div className="shrink-0 border-t border-border bg-card px-4 py-4 sm:px-6">
           <div className="mx-auto max-w-2xl">
+              {editingIndex !== null && (
+              <div className="mb-2 flex items-center justify-between gap-3 rounded-xl bg-primary/10 px-3 py-1.5 text-xs text-primary">
+                <span>
+                  Editing your message. Sending replaces it and the replies
+                  after it.
+                </span>
+                <button
+                  type="button"
+                  onClick={cancelEdit}
+                  className="inline-flex items-center gap-1 font-semibold hover:underline"
+                >
+                  <X className="h-3 w-3" />
+                  Cancel
+                </button>
+              </div>
+            )}
             <div className="flex items-end gap-3 rounded-2xl border border-border bg-muted px-4 py-3 transition focus-within:border-primary/40 focus-within:bg-card">
               <textarea
                 ref={textareaRef}
@@ -622,17 +907,55 @@ export default function AiAssistantPage() {
                 style={{ maxHeight: "140px" }}
                 disabled={isLoading}
               />
-              <Button
+              
+                            <button
                 type="button"
-                size="sm"
-                onClick={() => send(input)}
-                disabled={!input.trim() || isLoading}
-                className="shrink-0"
-                style={{ backgroundColor: "var(--primary)" }}
+                onClick={toggleVoice}
+                disabled={isLoading || !speech.isSupported}
+                aria-pressed={speech.isListening}
+                aria-label={
+                  speech.isListening ? "Stop voice input" : "Start voice input"
+                }
+                title={
+                  !speech.isSupported
+                    ? "Voice input isn't supported in this browser. Try Chrome, Edge or Safari."
+                    : speech.isListening
+                      ? "Tap to stop"
+                      : "Speak your message"
+                }
+                className={`flex size-9 shrink-0 items-center justify-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                  speech.isListening
+                    ? "animate-pulse bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-card hover:text-primary"
+                }`}
               >
-                <Send className="h-4 w-4" />
-                <span className="sr-only">Send</span>
-              </Button>
+                <Mic className="h-4 w-4" />
+              </button>
+
+              {isLoading ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={stopGenerating}
+                  className="shrink-0 gap-1.5"
+                >
+                  <Square className="h-3.5 w-3.5" fill="currentColor" />
+                  Stop
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => send(input, editingIndex)}
+                  disabled={!input.trim()}
+                  className="shrink-0"
+                  style={{ backgroundColor: "var(--primary)" }}
+                >
+                  <Send className="h-4 w-4" />
+                  <span className="sr-only">Send</span>
+                </Button>
+              )}
             </div>
             <p className="mt-2 text-center text-[10px] text-muted-foreground">
               Press Enter to send · Shift+Enter for a new line

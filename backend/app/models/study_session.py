@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone, date, time
+from datetime import datetime, timezone, date, time, timedelta
 
 from sqlalchemy import String, Text, DateTime, ForeignKey, Date, Time, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -96,3 +96,12 @@ class StudySession(Base):
 
     def __repr__(self) -> str:
         return f"<StudySession id={self.id} date={self.session_date} status={self.status}>"
+
+    @property
+    def is_edit_locked(self) -> bool:
+        """
+        True once the session ended more than 24 hours ago.
+        After that the student can no longer edit or reschedule it.
+        """
+        ends_at = datetime.combine(self.session_date, self.end_time)
+        return datetime.now() > ends_at + timedelta(hours=24)

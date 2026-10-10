@@ -1,8 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from io import BytesIO
+
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
+from PIL import Image, ImageOps, UnidentifiedImageError
 from sqlalchemy.orm import Session
 
 from app.dependencies import get_db, get_current_user
 from app.models.user import User
+from app.models.user_avatar import UserAvatar
+from datetime import datetime, timezone
 from app.schemas.auth import UserResponse, MessageResponse
 from app.schemas.user import UpdateProfileRequest, ChangePasswordRequest
 from app.utils.security import verify_password, hash_password
@@ -199,3 +204,107 @@ def complete_onboarding(
     db.commit()
     db.refresh(current_user)
     return current_user
+
+# ---------------------------------------------------------------------------
+# Profile photo (avatar)
+# ---------------------------------------------------------------------------
+
+MAX_AVATAR_BYTES = 5 * 1024 * 1024      # 5 MB upload limit
+AVATAR_SIZE = 512                        # saved as a 512 x 512 square
+ALLOWED_AVATAR_FORMATS = {"JPEG", "PNG", "WEBP"}
+
+
+def _make_avatar_jpeg(file_bytes: bytes) -> bytes:
+    """
+    Validates an uploaded picture and turns it into a small square JPEG.
+    Raises a friendly 400 error if the file is not a usable image.
+    """
+    bad_image = HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="That file isn't a usable photo. Please choose a JPEG, PNG or WebP image.",
+    )
+
+    try:
+        image = Image.open(BytesIO(file_bytes))
+        if image.format not in ALLOWED_AVATAR_FORMATS:
+            raise bad_image
+        image = ImageOps.exif_transpose(image)   # respect phone rotation
+        image = image.convert("RGB")
+    except (UnidentifiedImageError, OSError, Image.DecompressionBombError):
+        raise bad_image
+
+    # Crop the centre to a square, then shrink to 256 x 256
+    image = ImageOps.fit(image, (AVATAR_SIZE, AVATAR_SIZE), method=Image.LANCZOS)
+
+    output = BytesIO()
+    image.save(output, format="JPEG", quality=88, optimize=True)
+    return output.getvalue()
+
+
+@router.put("/me/avatar", response_model=UserResponse)
+async def upload_avatar(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Saves (or replaces) the current student's profile photo.
+    The picture is resized to a small square before it is stored.
+    """
+    file_bytes = await file.read(MAX_AVATAR_BYTES + 1)
+    if len(file_bytes) > MAX_AVATAR_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="That photo is too large. Please choose one under 5 MB.",
+        )
+
+    jpeg_bytes = _make_avatar_jpeg(file_bytes)
+
+    avatar = (
+        db.query(UserAvatar)
+        .filter(UserAvatar.user_id == current_user.id)
+        .first()
+    )
+    if avatar is None:
+        avatar = UserAvatar(
+            user_id=current_user.id,
+            content_type="image/jpeg",
+            data=jpeg_bytes,
+        )
+        db.add(avatar)
+    else:
+        avatar.data = jpeg_bytes
+        avatar.content_type = "image/jpeg"
+        avatar.updated_at = datetime.now(timezone.utc)
+
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
+@router.get("/me/avatar")
+def get_avatar(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns the current student's own profile photo.
+    There is no user id in this address, so nobody can ask for another
+    student's photo.
+    """
+    avatar = (
+        db.query(UserAvatar)
+        .filter(UserAvatar.user_id == current_user.id)
+        .first()
+    )
+    if avatar is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No profile photo yet.",
+        )
+
+    return Response(
+        content=avatar.data,
+        media_type=avatar.content_type,
+        headers={"Cache-Control": "private, max-age=3600"},
+    )

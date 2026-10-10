@@ -19,6 +19,9 @@ class CreateStudySessionRequest(BaseModel):
     priority: PRIORITY_VALUES = "medium"
     notes: str | None = None
     is_ai_generated: bool = False
+        # How many weekly sessions to create, counting the first one.
+    # 1 = just this one session. 4 = this one + the same slot for 3 more weeks.
+    repeat_weeks: int = Field(default=1, ge=1, le=16)
 
     @model_validator(mode="after")
     def end_time_must_be_after_start_time(self):
@@ -62,5 +65,6 @@ class StudySessionResponse(BaseModel):
     notes: str | None
     rescheduled_from_id: str | None
     is_ai_generated: bool
+    is_edit_locked: bool = False
 
     model_config = {"from_attributes": True}

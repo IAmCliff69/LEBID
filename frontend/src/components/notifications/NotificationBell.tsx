@@ -2,26 +2,47 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell } from "lucide-react";
 
-import { getUnreadCount } from "@/api/notifications";
+import {
+  generateNotifications,
+  getUnreadCount,
+  NOTIFICATIONS_UPDATED_EVENT,
+} from "@/api/notifications";
 
 export default function NotificationBell() {
   const [count, setCount] = useState(0);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Fetch once on mount
-    getUnreadCount()
-      .then(setCount)
-      .catch(() => setCount(0));
+    let isRefreshing = false;
 
-    // Poll every 60 seconds while the app is open
-    const interval = setInterval(() => {
-      getUnreadCount()
-        .then(setCount)
-        .catch(() => {});
+    const refreshNotifications = async () => {
+      if (isRefreshing) return;
+      isRefreshing = true;
+
+      try {
+        const result = await generateNotifications();
+        if (result.created_count > 0) {
+          window.dispatchEvent(new Event(NOTIFICATIONS_UPDATED_EVENT));
+        }
+        setCount(await getUnreadCount());
+      } catch (error) {
+        console.error("Failed to refresh notifications:", error);
+      } finally {
+        isRefreshing = false;
+      }
+    };
+
+    void refreshNotifications();
+
+    const interval = window.setInterval(() => {
+      void refreshNotifications();
     }, 60_000);
+    window.addEventListener("focus", refreshNotifications);
 
-    return () => clearInterval(interval);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refreshNotifications);
+    };
   }, []);
 
   return (

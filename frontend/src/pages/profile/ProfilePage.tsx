@@ -1,21 +1,16 @@
 import { useEffect, useState } from "react";
 import {
   CheckCircle2,
-  Eye,
-  EyeOff,
-  KeyRound,
   Save,
   UserRound,
 } from "lucide-react";
+import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import { useAuth } from "@/context/AuthContext";
-import {
-  changePassword,
-  updateProfile,
-} from "@/api/users";
+import { updateProfile } from "@/api/users";;
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,31 +38,7 @@ const profileSchema = z.object({
 
 type ProfileFormData = z.infer<typeof profileSchema>;
 
-// =========================================================
-// PASSWORD FORM
-// =========================================================
 
-const passwordSchema = z
-  .object({
-    current_password: z
-      .string()
-      .min(1, "Current password is required"),
-
-    new_password: z
-      .string()
-      .min(8, "New password must be at least 8 characters"),
-
-    confirm_password: z.string(),
-  })
-  .refine(
-    (data) => data.new_password === data.confirm_password,
-    {
-      message: "Passwords do not match",
-      path: ["confirm_password"],
-    }
-  );
-
-type PasswordFormData = z.infer<typeof passwordSchema>;
 
 // =========================================================
 // ERROR HELPER
@@ -114,21 +85,6 @@ export default function ProfilePage() {
   const [profileError, setProfileError] =
     useState<string | null>(null);
 
-  const [passwordSuccess, setPasswordSuccess] =
-    useState<string | null>(null);
-
-  const [passwordError, setPasswordError] =
-    useState<string | null>(null);
-
-  const [showCurrentPassword, setShowCurrentPassword] =
-    useState(false);
-
-  const [showNewPassword, setShowNewPassword] =
-    useState(false);
-
-  const [showConfirmPassword, setShowConfirmPassword] =
-    useState(false);
-
   // =======================================================
   // PROFILE FORM
   // =======================================================
@@ -143,20 +99,6 @@ export default function ProfilePage() {
       level: "",
       semester: "",
       academic_year: "",
-    },
-  });
-
-  // =======================================================
-  // PASSWORD FORM
-  // =======================================================
-
-  const passwordForm = useForm<PasswordFormData>({
-    resolver: zodResolver(passwordSchema),
-
-    defaultValues: {
-      current_password: "",
-      new_password: "",
-      confirm_password: "",
     },
   });
 
@@ -185,6 +127,7 @@ export default function ProfilePage() {
     data: ProfileFormData
   ) => {
     setProfileSuccess(null);
+    toast.success("Profile updated");
     setProfileError(null);
 
     try {
@@ -216,38 +159,6 @@ export default function ProfilePage() {
         getApiError(
           error,
           "Failed to update your profile. Please try again."
-        )
-      );
-    }
-  };
-
-  // =======================================================
-  // CHANGE PASSWORD
-  // =======================================================
-
-  const handlePasswordChange = async (
-    data: PasswordFormData
-  ) => {
-    setPasswordSuccess(null);
-    setPasswordError(null);
-
-    try {
-      const response = await changePassword({
-        current_password: data.current_password,
-        new_password: data.new_password,
-      });
-
-      passwordForm.reset();
-
-      setPasswordSuccess(
-        response.message ||
-          "Your password has been changed successfully."
-      );
-    } catch (error) {
-      setPasswordError(
-        getApiError(
-          error,
-          "Failed to change your password. Please try again."
         )
       );
     }
@@ -445,234 +356,6 @@ export default function ProfilePage() {
         </form>
       </section>
 
-      {/* ===================================================
-          PASSWORD
-      =================================================== */}
-
-      <section className="rounded-3xl border border-border bg-card p-6 shadow-sm sm:p-8">
-        <div className="mb-6">
-          <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <KeyRound className="size-5" />
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold">
-                Change password
-              </h3>
-
-              <p className="mt-1 text-sm text-muted-foreground">
-                Update your account password securely.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <form
-          onSubmit={passwordForm.handleSubmit(
-            handlePasswordChange
-          )}
-          className="max-w-xl space-y-5"
-        >
-          {/* Current password */}
-
-          <div className="space-y-2">
-            <Label htmlFor="current_password">
-              Current password
-            </Label>
-
-            <div className="relative">
-              <Input
-                id="current_password"
-                type={
-                  showCurrentPassword
-                    ? "text"
-                    : "password"
-                }
-                autoComplete="current-password"
-                {...passwordForm.register(
-                  "current_password"
-                )}
-                className="pr-11"
-              />
-
-              <button
-                type="button"
-                onClick={() =>
-                  setShowCurrentPassword(
-                    (value) => !value
-                  )
-                }
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition hover:text-foreground"
-                aria-label={
-                  showCurrentPassword
-                    ? "Hide current password"
-                    : "Show current password"
-                }
-              >
-                {showCurrentPassword ? (
-                  <EyeOff className="size-4" />
-                ) : (
-                  <Eye className="size-4" />
-                )}
-              </button>
-            </div>
-
-            {passwordForm.formState.errors.current_password && (
-              <p className="text-xs text-destructive">
-                {
-                  passwordForm.formState.errors
-                    .current_password.message
-                }
-              </p>
-            )}
-          </div>
-
-          {/* New password */}
-
-          <div className="space-y-2">
-            <Label htmlFor="new_password">
-              New password
-            </Label>
-
-            <div className="relative">
-              <Input
-                id="new_password"
-                type={
-                  showNewPassword
-                    ? "text"
-                    : "password"
-                }
-                autoComplete="new-password"
-                {...passwordForm.register(
-                  "new_password"
-                )}
-                className="pr-11"
-              />
-
-              <button
-                type="button"
-                onClick={() =>
-                  setShowNewPassword(
-                    (value) => !value
-                  )
-                }
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition hover:text-foreground"
-                aria-label={
-                  showNewPassword
-                    ? "Hide new password"
-                    : "Show new password"
-                }
-              >
-                {showNewPassword ? (
-                  <EyeOff className="size-4" />
-                ) : (
-                  <Eye className="size-4" />
-                )}
-              </button>
-            </div>
-
-            {passwordForm.formState.errors.new_password && (
-              <p className="text-xs text-destructive">
-                {
-                  passwordForm.formState.errors
-                    .new_password.message
-                }
-              </p>
-            )}
-          </div>
-
-          {/* Confirm password */}
-
-          <div className="space-y-2">
-            <Label htmlFor="confirm_password">
-              Confirm new password
-            </Label>
-
-            <div className="relative">
-              <Input
-                id="confirm_password"
-                type={
-                  showConfirmPassword
-                    ? "text"
-                    : "password"
-                }
-                autoComplete="new-password"
-                {...passwordForm.register(
-                  "confirm_password"
-                )}
-                className="pr-11"
-              />
-
-              <button
-                type="button"
-                onClick={() =>
-                  setShowConfirmPassword(
-                    (value) => !value
-                  )
-                }
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition hover:text-foreground"
-                aria-label={
-                  showConfirmPassword
-                    ? "Hide password confirmation"
-                    : "Show password confirmation"
-                }
-              >
-                {showConfirmPassword ? (
-                  <EyeOff className="size-4" />
-                ) : (
-                  <Eye className="size-4" />
-                )}
-              </button>
-            </div>
-
-            {passwordForm.formState.errors
-              .confirm_password && (
-              <p className="text-xs text-destructive">
-                {
-                  passwordForm.formState.errors
-                    .confirm_password.message
-                }
-              </p>
-            )}
-          </div>
-
-          {/* Feedback */}
-
-          {passwordError && (
-            <div className="rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3">
-              <p className="text-sm text-destructive">
-                {passwordError}
-              </p>
-            </div>
-          )}
-
-          {passwordSuccess && (
-            <div className="flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-4 py-3">
-              <CheckCircle2 className="size-4 shrink-0 text-primary" />
-
-              <p className="text-sm text-primary">
-                {passwordSuccess}
-              </p>
-            </div>
-          )}
-
-          <div className="flex justify-end">
-            <Button
-              type="submit"
-              disabled={
-                passwordForm.formState.isSubmitting
-              }
-            >
-              <KeyRound className="size-4" />
-
-              {passwordForm.formState.isSubmitting
-                ? "Changing..."
-                : "Change password"}
-            </Button>
-          </div>
-        </form>
-      </section>
     </div>
   );
 }

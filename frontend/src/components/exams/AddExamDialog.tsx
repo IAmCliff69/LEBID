@@ -13,6 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { DatePicker } from "@/components/ui/date-picker";
+import { TimePicker } from "@/components/ui/time-picker";
+
 import {
   Dialog,
   DialogContent,
@@ -184,10 +187,17 @@ export default function AddExamDialog({ onExamAdded }: Props) {
           {/* Date */}
           <div className="space-y-1.5">
             <Label htmlFor="exam_date">Exam date</Label>
-            <Input
-              id="exam_date"
-              type="date"
-              {...register("exam_date")}
+            <Controller
+              name="exam_date"
+              control={control}
+              render={({ field }) => (
+                <DatePicker
+                  id="exam_date"
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  invalid={!!errors.exam_date}
+                />
+              )}
             />
             {errors.exam_date && (
               <p className="text-destructive text-xs">{errors.exam_date.message}</p>
@@ -201,14 +211,36 @@ export default function AddExamDialog({ onExamAdded }: Props) {
                 Start time{" "}
                 <span className="text-muted-foreground font-normal">(optional)</span>
               </Label>
-              <Input id="start_time" type="time" {...register("start_time")} />
+              <Controller
+                name="start_time"
+                control={control}
+                render={({ field }) => (
+                  <TimePicker
+                    id="start_time"
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                    clearable
+                  />
+                )}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="end_time">
                 End time{" "}
                 <span className="text-muted-foreground font-normal">(optional)</span>
               </Label>
-              <Input id="end_time" type="time" {...register("end_time")} />
+              <Controller
+                name="end_time"
+                control={control}
+                render={({ field }) => (
+                  <TimePicker
+                    id="end_time"
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                    clearable
+                  />
+                )}
+              />
             </div>
           </div>
 

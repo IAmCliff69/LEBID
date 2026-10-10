@@ -1,15 +1,25 @@
 import {
+  startTransition,
   useEffect,
   useMemo,
   useRef,
   useState,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
-  
 } from "react";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+
+import {
+  CalendarToggle,
+  PlannerMarkerBlock,
+  PlannerMarkerChip,
+} from "@/components/planner/PlannerMarker";
+import { eventToMarker, useCalendarMarkers } from "@/hooks/useCalendarMarkers";
+import type { CalendarMarker } from "@/hooks/useCalendarMarkers";
 
 import {
   CalendarDays,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Clock,
@@ -21,26 +31,34 @@ import {
   Pencil,
   Trash2,
   CalendarClock,
+  Check,
+  Lock,
+  RotateCcw,
 } from "lucide-react";
 
 import { getCourses } from "@/api/courses";
 import type { Course } from "@/api/courses";
+import { toast } from "sonner";
+import { getLectureOccurrences } from "@/api/lectureOccurrences";
+import type { LectureOccurrence } from "@/api/lectureOccurrences";
+import { useNow } from "@/hooks/useNow";
+
 
 import {
   getStudySessions,
   getTodayStudySessions,
-  getWeekStudySessions,
   getMissedStudySessions,
   deleteStudySession,
+  updateStudySession,
 } from "@/api/studySessions";
-import type { StudySession } from "@/api/studySessions";
+import type { StudySession, StudySessionStatus } from "@/api/studySessions";
 import AddStudySessionDialog from "@/components/study-sessions/AddStudySessionDialog";
 import EditStudySessionDialog from "@/components/study-sessions/EditStudySessionDialog";
 import RescheduleStudySessionDialog from "@/components/study-sessions/RescheduleStudySessionDialog";
+import LectureDateMarker from "@/components/timetable/LectureDateMarker";
 
 import { getEvents } from "@/api/events";
 import type { PlannerEvent } from "@/api/events";
-
 import { getTimetable } from "@/api/timetable";
 import type { TimetableEntry } from "@/api/timetable";
 
@@ -54,9 +72,17 @@ const DAYS = [
   "Sunday",
 ];
 
+const LECTURE_MARK_LABELS: Record<LectureOccurrence["status"], string> = {
+  missed: "Missed",
+  cancelled: "Cancelled",
+  completed: "Completed",
+};
+
+// Every hour of the day: 12 AM (hour 0) up to 11 PM (hour 23)
+const FIRST_HOUR = 0;
 const TIME_SLOTS = Array.from(
-  { length: 14 },
-  (_, index) => index + 7
+  { length: 24 },
+  (_, index) => index + FIRST_HOUR
 );
 
 const ROW_HEIGHT = 56;
@@ -205,6 +231,14 @@ function getEventColor(id: string | number): string {
   return EVENT_PALETTE[hash % EVENT_PALETTE.length];
 }
 
+// 45 -> "45 min", 130 -> "2 h 10 min"
+function formatCountdown(minutes: number): string {
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest === 0 ? `${hours} h` : `${hours} h ${rest} min`;
+}
+
 export default function StudyPlannerPage() {
   const [currentWeek, setCurrentWeek] = useState(
     getMonday(new Date())
@@ -220,7 +254,7 @@ export default function StudyPlannerPage() {
     StudySession[]
   >([]);
   const [todaySessions, setTodaySessions] = useState<StudySession[]>([]);
-  const [weekSessions, setWeekSessions] = useState<StudySession[]>([]);
+
   const [missedSessions, setMissedSessions] = useState<StudySession[]>([]);
   const [events, setEvents] = useState<PlannerEvent[]>([]);
   const [timetableEntries, setTimetableEntries] =
@@ -228,6 +262,9 @@ export default function StudyPlannerPage() {
 
   const [selectedLecture, setSelectedLecture] =
     useState<TimetableEntry | null>(null);
+  // Missed / cancelled marks, and the date of the lecture block the student clicked
+  const [lectureMarks, setLectureMarks] = useState<LectureOccurrence[]>([]);
+  const [selectedLectureDate, setSelectedLectureDate] = useState<string | null>(null);
 
   const [selectedStudySession, setSelectedStudySession] =
     useState<StudySession | null>(null);
@@ -242,6 +279,13 @@ export default function StudyPlannerPage() {
   });
 
   const popupRef = useRef<HTMLDivElement | null>(null);
+    // The scrolling area of the week/day calendar
+  const calendarBodyRef = useRef<HTMLDivElement | null>(null);
+  // The mini calendar starts collapsed
+  const [miniCalendarOpen, setMiniCalendarOpen] = useState(false);
+    // The current time, refreshed every minute (for the Today card's countdown)
+  const now = useNow();
+  const [busyTodayId, setBusyTodayId] = useState<string | null>(null);
   const popupDragRef = useRef<{
     pointerId: number;
     pointerX: number;
@@ -255,6 +299,13 @@ export default function StudyPlannerPage() {
     useState(true);
   const [showPersonalEvents, setShowPersonalEvents] =
     useState(true);
+  const [showExams, setShowExams] = useState(true);
+  const [showAssignments, setShowAssignments] = useState(true);
+  const [showTasks, setShowTasks] = useState(true);
+
+  const navigate = useNavigate();
+  // Tasks, assignments and exams (loaded on their own)
+  const { getMarkersForDay: getDeadlineMarkers } = useCalendarMarkers();  
 
   // The study session currently open in the Edit dialog (null = closed)
   const [editingSession, setEditingSession] =
@@ -267,11 +318,16 @@ export default function StudyPlannerPage() {
 const [confirmingDelete, setConfirmingDelete] = useState(false);
 const [isDeleting, setIsDeleting] = useState(false);
 const [deleteError, setDeleteError] = useState<string | null>(null);  
+const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   // Bumped after a session is created so the planner reloads its data
   const [refreshKey, setRefreshKey] = useState(0);
 
   const [loading, setLoading] = useState(true);
+  // Set when the planner is opened from a link (toast, dashboard widget...)
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const [pendingHighlight, setPendingHighlight] = useState<string | null>(null);
   const [error, setError] = useState("");
 
   const calendarRange = useMemo(() => {
@@ -311,8 +367,8 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
         eventData,
         timetableData,
         todayData,
-        weekData,
         missedData,
+        lectureMarkData,
       ] = await Promise.all([
         getCourses(),
         getStudySessions({
@@ -326,8 +382,8 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
         getEvents({ upcoming_only: false }),
         getTimetable(),
         getTodayStudySessions(),
-        getWeekStudySessions(),
         getMissedStudySessions(),
+        getLectureOccurrences(),
       ]);
 
       setCourses(courseData);
@@ -336,8 +392,9 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
       setEvents(eventData);
       setTimetableEntries(timetableData);
       setTodaySessions(todayData);
-      setWeekSessions(weekData);
-      setMissedSessions(missedData);
+      // Skipped sessions were a decision, so only still-planned ones count as missed
+      setMissedSessions(missedData.filter((s) => s.status === "planned"));
+      setLectureMarks(lectureMarkData);
       } catch (err) {
         console.error("Failed to load planner:", err);
 
@@ -352,6 +409,48 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
     loadPlannerData();
   }, [calendarRange, currentWeek, refreshKey]);
 
+  // Opened with ?date=...&highlight=...: jump to that week and remember what to flash.
+  useEffect(() => {
+    const dateParam = searchParams.get("date");
+    const highlight = searchParams.get("highlight");
+    if (!dateParam || !highlight) return;
+
+    const date = new Date(`${dateParam}T00:00:00`);
+    if (Number.isNaN(date.getTime())) return;
+
+    startTransition(() => {
+      setSelectedDate(date);
+      setCurrentWeek(getMonday(date));
+      setCalendarView("week");
+      setPendingHighlight(highlight);
+    });
+    // location.key changes on every visit, so the same link works twice
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.key]);
+
+  // Once the item is on the screen, scroll to it and flash it.
+  useEffect(() => {
+    if (!pendingHighlight || loading) return;
+
+    const element = document.querySelector<HTMLElement>(
+      `[data-item-id="${CSS.escape(pendingHighlight)}"]`
+    );
+
+    // The week's data may still be loading: this effect runs again when it arrives.
+    if (!element) {
+      const giveUp = window.setTimeout(() => setPendingHighlight(null), 5000);
+      return () => window.clearTimeout(giveUp);
+    }
+
+    element.scrollIntoView({ behavior: "smooth", block: "center" });
+    element.classList.add("lebid-highlight");
+    const remove = window.setTimeout(() => {
+      element.classList.remove("lebid-highlight");
+    }, 2500);
+    startTransition(() => setPendingHighlight(null));
+    return () => window.clearTimeout(remove);
+  }, [pendingHighlight, loading, studySessions, timetableEntries, currentWeek]);
+
   const weekDays = useMemo(() => {
     return DAYS.map((dayName, index) => {
       const date = addDays(currentWeek, index);
@@ -364,6 +463,21 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
       };
     });
   }, [currentWeek]);
+
+  // Open the week/day calendar near the current time instead of at midnight.
+  useEffect(() => {
+    if (loading || calendarView === "month") return;
+    const element = calendarBodyRef.current;
+    if (!element) return;
+
+    const now = new Date();
+    const showsToday = weekDays.some((day) => day.key === dateToKey(now));
+    const startMinutes = showsToday
+      ? Math.max(0, now.getHours() * 60 + now.getMinutes() - 60)
+      : 7 * 60;
+
+    element.scrollTop = (startMinutes / 60) * ROW_HEIGHT;
+  }, [loading, calendarView, weekDays]);
 
   const calendarDays = useMemo(() => {
     if (calendarView !== "day") {
@@ -407,7 +521,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
   ) => {
     const startMinutes = timeToMinutes(startTime);
     const endMinutes = timeToMinutes(endTime);
-    const calendarStartMinutes = 7 * 60;
+    const calendarStartMinutes = FIRST_HOUR * 60;
 
     const top =
       ((startMinutes - calendarStartMinutes) / 60) *
@@ -443,7 +557,8 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
     item:
       | TimetableEntry
       | StudySession
-      | PlannerEvent
+      | PlannerEvent,
+    dateKey?: string
   ) => {
     event.stopPropagation();
     const rect = event.currentTarget.getBoundingClientRect();
@@ -466,6 +581,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
 
     if (type === "lecture") {
       setSelectedLecture(item as TimetableEntry);
+      setSelectedLectureDate(dateKey ?? null);
       setSelectedStudySession(null);
       setSelectedEvent(null);
     }
@@ -599,20 +715,98 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
     selectedEvent,
   ]);
 
-  const handleDeleteSession = async () => {
-  if (!selectedStudySession) return;
-  setIsDeleting(true);
-  setDeleteError(null);
-  try {
-    await deleteStudySession(selectedStudySession.id);
-    closePopup();
-    setRefreshKey((k) => k + 1);
-  } catch {
-    setDeleteError("Failed to delete session. Please try again.");
-  } finally {
-    setIsDeleting(false);
-  }
-};
+    // The course name for a session, used in the toast messages.
+  const getCourseNameForToast = (courseId: string) =>
+    courses.find((c) => String(c.id) === String(courseId))?.name ??
+    "Study session";
+
+  // Mark the open session as completed / skipped, or put it back to planned.
+  const handleSetStatus = async (newStatus: StudySessionStatus) => {
+    if (!selectedStudySession) return;
+
+    const messages: Partial<Record<StudySessionStatus, string>> = {
+      completed: "Session marked as completed",
+      skipped: "Session skipped",
+      planned: "Session set back to planned",
+    };
+
+    setIsUpdatingStatus(true);
+    try {
+      const updated = await updateStudySession(selectedStudySession.id, {
+        status: newStatus,
+      });
+      setSelectedStudySession(updated);
+      setRefreshKey((k) => k + 1);
+      toast.success(messages[newStatus] ?? "Session updated", {
+        description: getCourseNameForToast(updated.course_id),
+      });
+    } catch (error) {
+      const detail = (
+        error as { response?: { data?: { detail?: unknown } } }
+      ).response?.data?.detail;
+      toast.error("Couldn't update the session", {
+        description:
+          typeof detail === "string" ? detail : "Please try again.",
+      });
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
+    // Complete / skip a session straight from the Today card
+  const handleTodayStatus = async (
+    session: StudySession,
+    newStatus: StudySessionStatus
+  ) => {
+    setBusyTodayId(session.id);
+    try {
+      await updateStudySession(session.id, { status: newStatus });
+      setRefreshKey((k) => k + 1);
+      toast.success(
+        newStatus === "completed"
+          ? "Session marked as completed"
+          : "Session skipped",
+        { description: getCourseNameForToast(session.course_id) }
+      );
+    } catch (error) {
+      const detail = (
+        error as { response?: { data?: { detail?: unknown } } }
+      ).response?.data?.detail;
+      toast.error("Couldn't update the session", {
+        description: typeof detail === "string" ? detail : "Please try again.",
+      });
+    } finally {
+      setBusyTodayId(null);
+    }
+  };
+
+  // Jump the calendar to a session and flash it
+  const showSessionOnCalendar = (session: StudySession) => {
+    const date = new Date(`${session.session_date}T00:00:00`);
+    setSelectedDate(date);
+    setCurrentWeek(getMonday(date));
+    setCalendarView("week");
+    setPendingHighlight(session.id);
+  };
+
+    const handleDeleteSession = async () => {
+    if (!selectedStudySession) return;
+    const deletedSession = selectedStudySession;
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteStudySession(deletedSession.id);
+      closePopup();
+      setRefreshKey((k) => k + 1);
+      toast.success("Study session deleted", {
+        description: getCourseNameForToast(deletedSession.course_id),
+      });
+    } catch {
+      setDeleteError("Failed to delete session. Please try again.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const navigateCalendar = (direction: -1 | 1) => {
     closePopup();
@@ -628,13 +822,12 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
     } else if (calendarView === "day") {
       nextDate = addDays(selectedDate, direction);
     } else {
-      nextDate = addDays(currentWeek, direction * 7);
+      // Move the selected date by a week (keeps the same weekday)
+      nextDate = addDays(selectedDate, direction * 7);
     }
 
     setSelectedDate(nextDate);
-    setCurrentWeek(
-      calendarView === "week" ? nextDate : getMonday(nextDate)
-    );
+    setCurrentWeek(getMonday(nextDate));
   };
 
   const previousWeek = () => navigateCalendar(-1);
@@ -654,6 +847,26 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
     return events.filter(
       (event) => event.event_date === dateKey
     );
+  };
+
+    // Everything that is drawn as a marker on one day: exams, assignments,
+  // tasks, and events that have no times. Respects the "Other calendars" ticks.
+  const getMarkersForDay = (dateKey: string): CalendarMarker[] => {
+    const markers = getDeadlineMarkers(dateKey).filter(
+      (marker) =>
+        (marker.type === "exam" && showExams) ||
+        (marker.type === "assignment" && showAssignments) ||
+        (marker.type === "task" && showTasks)
+    );
+
+    if (showPersonalEvents) {
+      for (const event of getEventsForDay(dateKey)) {
+        const marker = eventToMarker(event);
+        if (marker) markers.push(marker);
+      }
+    }
+
+    return markers.sort((a, b) => a.startMin - b.startMin);
   };
 
   const getSessionsForDay = (dateKey: string) => {
@@ -682,6 +895,20 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
     );
   };
 
+  // Did the student mark this class, on this date, as missed or cancelled?
+  const getLectureMark = (lectureId: string | number, dateKey: string) =>
+    lectureMarks.find(
+      (mark) =>
+        mark.timetable_entry_id === String(lectureId) &&
+        mark.occurrence_date === dateKey
+    );
+
+  // The mark (if any) for the lecture whose pop-up is open
+  const selectedLectureMark =
+    selectedLecture && selectedLectureDate
+      ? getLectureMark(selectedLecture.id, selectedLectureDate)
+      : undefined;
+
   const todayKey = dateToKey(new Date());
   const selectedDateKey = dateToKey(selectedDate);
 
@@ -691,18 +918,88 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
       event.event_date <= dateToKey(addDays(currentWeek, 6))
   );
 
-  const weeklyLectureCount =
-    timetableEntries.filter((entry) =>
-      weekDays.some(
-        (day) =>
-          day.dayNumber === entry.day_of_week
+  // Classes this week, not counting ones the student marked as cancelled
+  const weeklyLectureCount = weekDays.reduce(
+    (total, day) =>
+      total +
+      getLecturesForDay(day.dayNumber).filter(
+        (lecture) =>
+          getLectureMark(lecture.id, day.key)?.status !== "cancelled"
+      ).length,
+    0
+  );
+
+  // Study sessions in the week being shown, in time order. A session that was
+  // rescheduled lives in its new slot, so the old copy is not counted.
+  const weeklySessionList = weeklySummarySessions
+    .filter((session) => session.status !== "rescheduled")
+    .sort((a, b) =>
+      `${a.session_date}${a.start_time}`.localeCompare(
+        `${b.session_date}${b.start_time}`
       )
-    ).length;
+    );
 
   const totalWeeklyItems =
-    weeklySummarySessions.length +
-    weeklyEvents.length +
-    weeklyLectureCount;
+    weeklySessionList.length + weeklyEvents.length + weeklyLectureCount;
+
+  // The 3 study sessions closest to now: the next ones that have not ended
+  // yet. If nothing is left in this week, show the latest ones instead.
+  const nowDateKey = dateToKey(new Date());
+  const nowTime = new Date().toTimeString().slice(0, 5);
+  const upcomingWeekSessions = weeklySessionList.filter(
+    (session) =>
+      session.session_date > nowDateKey ||
+      (session.session_date === nowDateKey &&
+        session.end_time.slice(0, 5) >= nowTime)
+  );
+  const closestSessions =
+    upcomingWeekSessions.length > 0
+      ? upcomingWeekSessions.slice(0, 3)
+      : weeklySessionList.slice(-3);
+
+  // ---- Today card: the closest session and the rest of the day ----
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+  const todayActive = todaySessions
+    .filter((s) => s.status === "planned" || s.status === "in_progress")
+    .sort((a, b) => a.start_time.localeCompare(b.start_time));
+
+  const todayFinishedCount = todaySessions.filter(
+    (s) => s.status === "completed" || s.status === "skipped"
+  ).length;
+
+  // Happening now, otherwise the next one to start, otherwise the latest one
+  // whose time has passed without being marked
+  const featuredSession =
+    todayActive.find(
+      (s) =>
+        timeToMinutes(s.start_time) <= nowMinutes &&
+        timeToMinutes(s.end_time) > nowMinutes
+    ) ??
+    todayActive.find((s) => timeToMinutes(s.start_time) > nowMinutes) ??
+    todayActive[todayActive.length - 1];
+
+  const laterToday = todayActive.filter((s) => s.id !== featuredSession?.id);
+
+  let featuredLabel = "";
+  let featuredCountdown = "";
+  let featuredStarted = false;
+  if (featuredSession) {
+    const start = timeToMinutes(featuredSession.start_time);
+    const end = timeToMinutes(featuredSession.end_time);
+    featuredStarted = start <= nowMinutes;
+
+    if (start <= nowMinutes && end > nowMinutes) {
+      featuredLabel = "Happening now";
+      featuredCountdown = `Ends in ${formatCountdown(end - nowMinutes)}`;
+    } else if (start > nowMinutes) {
+      featuredLabel = "Up next";
+      featuredCountdown = `Starts in ${formatCountdown(start - nowMinutes)}`;
+    } else {
+      featuredLabel = "Time passed";
+      featuredCountdown = "Mark it as completed or skipped";
+    }
+  }
 
   if (loading) {
     return (
@@ -724,12 +1021,12 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
   }
 
   return (
-    <div className="-m-5 min-h-full space-y-6 bg-background p-5 pb-8 sm:-m-6 sm:p-6 sm:pb-8 lg:-m-8 lg:p-8 lg:pb-8">
+        <div className="-m-5 min-h-full space-y-6 bg-background p-5 pb-8 sm:-m-6 sm:p-6 sm:pb-8 lg:-m-8 lg:p-8 lg:pb-8 planner-fit:flex planner-fit:h-[calc(100dvh-4rem)] planner-fit:min-h-0 planner-fit:flex-col planner-fit:gap-4 planner-fit:space-y-0 planner-fit:overflow-hidden planner-fit:py-4">
       {/* =====================================================
           PLANNER HEADER
       ====================================================== */}
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between planner-fit:shrink-0">
         <div>
           <div className="flex items-center gap-3">
             <div
@@ -747,7 +1044,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                 Study Planner
               </h1>
 
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="mt-1 text-sm text-muted-foreground planner-tight:hidden">
                 Plan, view and manage everything happening
                 in your academic week.
               </p>
@@ -758,7 +1055,20 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
         <AddStudySessionDialog
           courses={courses}
           defaultDate={dateToKey(selectedDate)}
-          onSessionAdded={() => setRefreshKey((k) => k + 1)}
+          onSessionAdded={(session, count) => {
+            setRefreshKey((k) => k + 1);
+            toast.success(
+              count > 1
+                ? `${count} study sessions added`
+                : "Study session added",
+              {
+                description:
+                  count > 1
+                    ? `${getCourseNameForToast(session.course_id)} · every week for ${count} weeks`
+                    : getCourseNameForToast(session.course_id),
+              }
+            );
+          }}
         />
       </div>
 
@@ -774,25 +1084,36 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
           PLANNER WORKSPACE
       ====================================================== */}
 
-      <div className="grid gap-5 xl:grid-cols-[220px_minmax(0,1fr)]">
+      <div className="grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)] planner-fit:min-h-0 planner-fit:flex-1 planner-fit:grid-rows-[minmax(0,1fr)]">
         {/* =================================================
             LEFT PLANNER PANEL
         ================================================== */}
 
-        <aside className="space-y-5">
+                <aside className="order-2 space-y-5 lg:order-1 planner-fit:min-h-0 planner-fit:overflow-y-auto planner-fit:pr-1">
           {/* MINI CALENDAR */}
 
           <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h2 className="text-sm font-semibold text-foreground">
-                  {formatMonthYear(currentWeek)}
-                </h2>
+            <div className={`flex items-center justify-between ${miniCalendarOpen ? "mb-4" : ""}`}>
+              <button
+                type="button"
+                aria-expanded={miniCalendarOpen}
+                aria-controls="planner-mini-calendar"
+                onClick={() => setMiniCalendarOpen((open) => !open)}
+                className="flex items-center gap-2 text-left"
+              >
+                <span>
+                  <h2 className="text-sm font-semibold text-foreground">
+                    {formatMonthYear(selectedDate)}
+                  </h2>
 
-                <p className="mt-0.5 text-[11px] text-muted-foreground">
-                  Week overview
-                </p>
-              </div>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    Week overview
+                  </p>
+                </span>
+                <ChevronDown
+                  className={`h-4 w-4 text-muted-foreground transition-transform ${miniCalendarOpen ? "rotate-180" : ""}`}
+                />
+              </button>
 
               <div className="flex items-center gap-1">
                 <button
@@ -812,62 +1133,82 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                 >
                   <ChevronRight className="h-3.5 w-3.5" />
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => setMiniCalendarOpen((open) => !open)}
+                  aria-expanded={miniCalendarOpen}
+                  aria-label={
+                    miniCalendarOpen
+                      ? "Collapse mini calendar"
+                      : "Expand mini calendar"
+                  }
+                  className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted"
+                >
+                  <ChevronDown
+                    className={`h-3.5 w-3.5 transition-transform ${
+                      miniCalendarOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
               </div>
             </div>
 
-            <div className="grid grid-cols-7 gap-1">
-              {["M", "T", "W", "T", "F", "S", "S"].map(
-                (day, index) => (
-                  <div
-                    key={`${day}-${index}`}
-                    className="pb-2 text-center text-[10px] font-semibold uppercase text-muted-foreground"
-                  >
-                    {day}
-                  </div>
-                )
-              )}
+            {miniCalendarOpen && (
+              <div id="planner-mini-calendar" className="grid grid-cols-7 gap-1">
+                {["M", "T", "W", "T", "F", "S", "S"].map(
+                  (day, index) => (
+                    <div
+                      key={`${day}-${index}`}
+                      className="pb-2 text-center text-[10px] font-semibold uppercase text-muted-foreground"
+                    >
+                      {day}
+                    </div>
+                  )
+                )}
 
-              {miniCalendarDays.map((date) => {
-                const dayKey = dateToKey(date);
-                const isToday = dayKey === todayKey;
-                const isCurrentMonth =
-                  date.getMonth() === currentWeek.getMonth();
-                const isSelectedWeek =
-                  date >= currentWeek &&
-                  date < addDays(currentWeek, 7);
+                {miniCalendarDays.map((date) => {
+                  const dayKey = dateToKey(date);
+                  const isToday = dayKey === todayKey;
+                  const isCurrentMonth =
+                    date.getMonth() === currentWeek.getMonth();
+                  const isSelectedWeek =
+                    date >= currentWeek &&
+                    date < addDays(currentWeek, 7);
 
-                return (
-                  <button
-                    key={dayKey}
-                    type="button"
-                    onClick={() => {
-                      closePopup();
-                      setSelectedDate(date);
-                      setCurrentWeek(getMonday(date));
-                    }}
-                    aria-label={formatDate(date)}
-                    className={`flex aspect-square items-center justify-center rounded-lg text-[11px] font-medium transition ${
-                      isToday
-                        ? "text-primary-foreground shadow-sm"
-                        : isCurrentMonth
-                          ? "text-secondary-foreground hover:bg-muted"
-                          : "text-muted-foreground hover:bg-muted"
-                    }`}
-                    style={
-                      isToday
-                        ? {
-                            backgroundColor: PRIMARY_COLOR,
-                          }
-                        : isSelectedWeek
-                          ? { backgroundColor: "var(--secondary)" }
-                          : undefined
-                    }
-                  >
-                    {formatDayNumber(date)}
-                  </button>
-                );
-              })}
-            </div>
+                  return (
+                    <button
+                      key={dayKey}
+                      type="button"
+                      onClick={() => {
+                        closePopup();
+                        setSelectedDate(date);
+                        setCurrentWeek(getMonday(date));
+                      }}
+                      aria-label={formatDate(date)}
+                      className={`flex aspect-square items-center justify-center rounded-lg text-[11px] font-medium transition ${
+                        isToday
+                          ? "text-primary-foreground shadow-sm"
+                          : isCurrentMonth
+                            ? "text-secondary-foreground hover:bg-muted"
+                            : "text-muted-foreground hover:bg-muted"
+                      }`}
+                      style={
+                        isToday
+                          ? {
+                              backgroundColor: PRIMARY_COLOR,
+                            }
+                          : isSelectedWeek
+                            ? { backgroundColor: "var(--secondary)" }
+                            : undefined
+                      }
+                    >
+                      {formatDayNumber(date)}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </section>
 
           {/* WEEK SUMMARY */}
@@ -899,26 +1240,48 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                 <p className="mt-0.5 text-xs text-muted-foreground">
                   scheduled items
                 </p>
+
+                <p className="mt-1.5 text-[10px] text-muted-foreground">
+                  {weeklyLectureCount}{" "}
+                  {weeklyLectureCount === 1 ? "class" : "classes"} ·{" "}
+                  {weeklySessionList.length}{" "}
+                  {weeklySessionList.length === 1 ? "session" : "sessions"} ·{" "}
+                  {weeklyEvents.length}{" "}
+                  {weeklyEvents.length === 1 ? "event" : "events"}
+                </p>
               </div>
 
-              {/* Weekly study session count — now from the dedicated endpoint */}
               <div className="rounded-lg bg-muted p-3">
                 <p className="text-xs font-semibold text-secondary-foreground">
                   Study sessions
                 </p>
 
                 <p className="mt-1 text-[11px] text-muted-foreground">
-                  {weekSessions.length === 0
+                  {weeklySessionList.length === 0
                     ? "No study sessions this week."
-                    : `${weekSessions.length} session${weekSessions.length === 1 ? "" : "s"} planned this week.`}
+                    : `${weeklySessionList.length} session${
+                        weeklySessionList.length === 1 ? "" : "s"
+                      } planned this week.`}
                 </p>
 
-                {weekSessions.length > 0 && (
+                {closestSessions.length > 0 && (
                   <div className="mt-2 space-y-1">
-                    {weekSessions.slice(0, 3).map((s) => (
-                      <div
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      {upcomingWeekSessions.length > 0
+                        ? "Next up"
+                        : "Latest this week"}
+                    </p>
+
+                    {closestSessions.map((s) => (
+                      <button
                         key={s.id}
-                        className="flex items-center justify-between gap-2 rounded-md bg-card px-2 py-1.5 text-[10px]"
+                        type="button"
+                        onClick={() => {
+                          const date = new Date(`${s.session_date}T00:00:00`);
+                          setSelectedDate(date);
+                          setCurrentWeek(getMonday(date));
+                        }}
+                        className="flex w-full items-center justify-between gap-2 rounded-md bg-card px-2 py-1.5 text-left text-[10px] transition hover:bg-secondary"
                       >
                         <span className="truncate font-medium text-secondary-foreground">
                           {getCourse(s.course_id)?.code ?? "Study"}
@@ -931,14 +1294,15 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                             weekday: "short",
                             month: "short",
                             day: "numeric",
-                          })}
+                          })}{" "}
+                          · {formatTime(s.start_time)}
                         </span>
-                      </div>
+                      </button>
                     ))}
 
-                    {weekSessions.length > 3 && (
+                    {weeklySessionList.length > closestSessions.length && (
                       <p className="pt-0.5 text-center text-[10px] text-muted-foreground">
-                        +{weekSessions.length - 3} more
+                        +{weeklySessionList.length - closestSessions.length} more
                       </p>
                     )}
                   </div>
@@ -946,152 +1310,6 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
               </div>
             </div>
           </section>
-
-          {/* TODAY'S STUDY SESSIONS */}
-
-          <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-            <div className="mb-3 flex items-center justify-between">
-              <div>
-                <h2 className="text-sm font-semibold text-foreground">
-                  Today
-                </h2>
-
-                <p className="mt-0.5 text-[11px] text-muted-foreground">
-                  Study sessions scheduled for today
-                </p>
-              </div>
-
-              <BookOpen className="h-4 w-4 text-muted-foreground" />
-            </div>
-
-            {todaySessions.length === 0 ? (
-              <p className="rounded-lg bg-muted px-3 py-3 text-[11px] text-muted-foreground">
-                No study sessions planned for today.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {todaySessions.map((s) => {
-                  const course = getCourse(s.course_id);
-
-                  return (
-                    <div
-                      key={s.id}
-                      className="rounded-lg border border-border bg-background px-3 py-2.5"
-                    >
-                      <p className="truncate text-xs font-semibold text-foreground">
-                        {course?.name ?? s.topic ?? "Study Session"}
-                      </p>
-
-                      {s.topic && s.topic !== course?.name && (
-                        <p className="mt-0.5 truncate text-[10px] text-muted-foreground">
-                          {s.topic}
-                        </p>
-                      )}
-
-                      <div className="mt-1.5 flex items-center gap-2 text-[10px] text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {formatTime(s.start_time)} – {formatTime(s.end_time)}
-                        </span>
-
-                        {s.venue && (
-                          <span className="flex items-center gap-1 truncate">
-                            <MapPin className="h-3 w-3 shrink-0" />
-                            {s.venue}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Status badge */}
-                      <div className="mt-1.5">
-                        <span
-                          className={`inline-flex rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${
-                            s.status === "completed"
-                              ? "bg-success/10 text-success"
-                              : s.status === "in_progress"
-                                ? "bg-primary/10 text-primary"
-                                : s.status === "skipped"
-                                  ? "bg-destructive/10 text-destructive"
-                                  : "bg-muted text-muted-foreground"
-                          }`}
-                        >
-                          {getStatusLabel(s.status)}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </section>
-
-          {/* MISSED STUDY SESSIONS */}
-
-          {missedSessions.length > 0 && (
-            <section className="rounded-2xl border border-destructive/20 bg-card p-4 shadow-sm">
-              <div className="mb-3 flex items-center justify-between">
-                <div>
-                  <h2 className="text-sm font-semibold text-foreground">
-                    Missed Sessions
-                  </h2>
-
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    Past sessions not yet completed
-                  </p>
-                </div>
-
-                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold text-destructive-foreground">
-                  {missedSessions.length}
-                </span>
-              </div>
-
-              <div className="space-y-2">
-                {missedSessions.slice(0, 4).map((s) => {
-                  const course = getCourse(s.course_id);
-
-                  return (
-                    <div
-                      key={s.id}
-                      className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2.5"
-                    >
-                      <p className="truncate text-xs font-semibold text-foreground">
-                        {course?.name ?? s.topic ?? "Study Session"}
-                      </p>
-
-                      <p className="mt-0.5 text-[10px] text-muted-foreground">
-                        {new Date(
-                          `${s.session_date}T00:00:00`
-                        ).toLocaleDateString("en-US", {
-                          weekday: "short",
-                          month: "short",
-                          day: "numeric",
-                        })}
-                        {" · "}
-                        {formatTime(s.start_time)} – {formatTime(s.end_time)}
-                      </p>
-
-                      {s.venue && (
-                        <p className="mt-0.5 flex items-center gap-1 truncate text-[10px] text-muted-foreground">
-                          <MapPin className="h-3 w-3 shrink-0" />
-                          {s.venue}
-                        </p>
-                      )}
-                    </div>
-                  );
-                })}
-
-                {missedSessions.length > 4 && (
-                  <p className="text-center text-[10px] text-muted-foreground">
-                    +{missedSessions.length - 4} more missed sessions
-                  </p>
-                )}
-
-                <p className="pt-1 text-[10px] leading-relaxed text-muted-foreground">
-                  Click a session on the calendar to reschedule or mark it as skipped.
-                </p>
-              </div>
-            </section>
-          )}
 
           {/* OTHER CALENDARS */}
 
@@ -1106,7 +1324,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
               </p>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-3">  
               {/* PERSONAL EVENTS */}
 
               <button
@@ -1197,26 +1415,274 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                     <span className="h-1.5 w-1.5 rounded-full bg-card" />
                   )}
                 </span>
-
                 <span className="h-2.5 w-2.5 rounded-full bg-primary" />
 
                 <span className="text-xs text-secondary-foreground">
                   Study Sessions
                 </span>
               </button>
+
+              {/* EXAMS, ASSIGNMENTS, TASKS */}
+
+              <CalendarToggle
+                checked={showExams}
+                onChange={() => setShowExams((previous) => !previous)}
+                label="Exams"
+                dotClassName="bg-destructive"
+              />
+              <CalendarToggle
+                checked={showAssignments}
+                onChange={() => setShowAssignments((previous) => !previous)}
+                label="Assignments"
+                dotClassName="bg-warning"
+              />
+              <CalendarToggle
+                checked={showTasks}
+                onChange={() => setShowTasks((previous) => !previous)}
+                label="Tasks"
+                dotClassName="bg-muted-foreground"
+              />
             </div>
           </section>
+
+                    {/* TODAY'S STUDY SESSIONS */}
+
+          <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">
+                  Today
+                </h2>
+
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  {todaySessions.length === 0
+                    ? "No study sessions today"
+                    : `${todayActive.length} left · ${todayFinishedCount} done`}
+                </p>
+              </div>
+
+              <BookOpen className="h-4 w-4 text-muted-foreground" />
+            </div>
+
+            {todayActive.length === 0 ? (
+              <p className="rounded-lg bg-muted px-3 py-3 text-[11px] text-muted-foreground">
+                {todaySessions.length === 0
+                  ? "No study sessions planned for today."
+                  : "Nothing left to do today. Well done!"}
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {/* The closest session, with its details */}
+                {featuredSession && (
+                  <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-primary">
+                      {featuredLabel}
+                    </p>
+
+                    <p className="mt-1 text-sm font-semibold leading-tight text-foreground">
+                      {getCourse(featuredSession.course_id)?.name ??
+                        "Study session"}
+                    </p>
+
+                    {getCourse(featuredSession.course_id)?.code && (
+                      <p className="text-[10px] text-muted-foreground">
+                        {getCourse(featuredSession.course_id)?.code}
+                      </p>
+                    )}
+
+                    {featuredSession.topic && (
+                      <p className="mt-1 text-xs text-foreground">
+                        {featuredSession.topic}
+                      </p>
+                    )}
+
+                    <div className="mt-2 space-y-1 text-[11px] text-muted-foreground">
+                      <p className="flex items-center gap-1.5">
+                        <Clock className="h-3 w-3 shrink-0" />
+                        {formatTime(featuredSession.start_time)} –{" "}
+                        {formatTime(featuredSession.end_time)}
+                      </p>
+                      <p className="flex items-center gap-1.5">
+                        <MapPin className="h-3 w-3 shrink-0" />
+                        {featuredSession.venue || "No venue set"}
+                      </p>
+                    </div>
+
+                    <p className="mt-2 text-xs font-semibold text-primary">
+                      {featuredCountdown}
+                    </p>
+
+                    <p className="mt-1 text-[10px] capitalize text-muted-foreground">
+                      {featuredSession.priority} priority
+                    </p>
+
+                    {featuredSession.notes && (
+                      <p className="mt-1 line-clamp-2 text-[11px] text-muted-foreground">
+                        {featuredSession.notes}
+                      </p>
+                    )}
+
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={
+                          busyTodayId === featuredSession.id || !featuredStarted
+                        }
+                        title={
+                          featuredStarted
+                            ? undefined
+                            : "Available once the session starts"
+                        }
+                        onClick={() =>
+                          handleTodayStatus(featuredSession, "completed")
+                        }
+                        className="inline-flex items-center gap-1 rounded-lg bg-success px-2.5 py-1 text-[11px] font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        <Check className="h-3 w-3" />
+                        Complete
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={busyTodayId === featuredSession.id}
+                        onClick={() =>
+                          handleTodayStatus(featuredSession, "skipped")
+                        }
+                        className="rounded-lg px-2.5 py-1 text-[11px] font-semibold text-muted-foreground transition hover:bg-muted disabled:opacity-50"
+                      >
+                        Skip
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => showSessionOnCalendar(featuredSession)}
+                        className="rounded-lg px-2.5 py-1 text-[11px] font-semibold text-primary transition hover:bg-secondary"
+                      >
+                        Show on calendar
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* The rest of the day */}
+                {laterToday.length > 0 && (
+                  <div>
+                    <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      Later today
+                    </p>
+
+                    <div className="space-y-1.5">
+                      {laterToday.map((s) => {
+                        const course = getCourse(s.course_id);
+
+                        return (
+                          <button
+                            key={s.id}
+                            type="button"
+                            onClick={() => showSessionOnCalendar(s)}
+                            className="flex w-full items-center justify-between gap-2 rounded-lg border border-border bg-background px-3 py-2 text-left transition hover:border-primary/40 hover:bg-primary/5"
+                          >
+                            <span className="min-w-0">
+                              <span className="block truncate text-xs font-semibold text-foreground">
+                                {course?.code ?? course?.name ?? "Study session"}
+                              </span>
+                              <span className="block truncate text-[10px] text-muted-foreground">
+                                {s.venue || "No venue set"}
+                              </span>
+                            </span>
+
+                            <span className="shrink-0 text-[10px] font-medium text-muted-foreground">
+                              {formatTime(s.start_time)}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+
+          {/* MISSED STUDY SESSIONS */}
+
+          {missedSessions.length > 0 && (
+            <section className="rounded-2xl border border-destructive/20 bg-card p-4 shadow-sm">
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <h2 className="text-sm font-semibold text-foreground">
+                    Missed Sessions
+                  </h2>
+
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    Past sessions not yet completed
+                  </p>
+                </div>
+
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold text-destructive-foreground">
+                  {missedSessions.length}
+                </span>
+              </div>
+
+              <div className="space-y-2">
+                {missedSessions.slice(0, 4).map((s) => {
+                  const course = getCourse(s.course_id);
+
+                  return (
+                    <div
+                      key={s.id}
+                      className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2.5"
+                    >
+                      <p className="truncate text-xs font-semibold text-foreground">
+                        {course?.name ?? s.topic ?? "Study Session"}
+                      </p>
+
+                      <p className="mt-0.5 text-[10px] text-muted-foreground">
+                        {new Date(
+                          `${s.session_date}T00:00:00`
+                        ).toLocaleDateString("en-US", {
+                          weekday: "short",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                        {" · "}
+                        {formatTime(s.start_time)} – {formatTime(s.end_time)}
+                      </p>
+
+                      {s.venue && (
+                        <p className="mt-0.5 flex items-center gap-1 truncate text-[10px] text-muted-foreground">
+                          <MapPin className="h-3 w-3 shrink-0" />
+                          {s.venue}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {missedSessions.length > 4 && (
+                  <p className="text-center text-[10px] text-muted-foreground">
+                    +{missedSessions.length - 4} more missed sessions
+                  </p>
+                )}
+
+                <p className="pt-1 text-[10px] leading-relaxed text-muted-foreground">
+                  Click a session on the calendar to reschedule or mark it as skipped.
+                </p>
+              </div>
+            </section>
+          )}
+
         </aside>
 
         {/* =================================================
             MAIN CALENDAR
         ================================================== */}
 
-        <section className="min-w-0">
+                <section className="order-1 min-w-0 lg:order-2 planner-fit:flex planner-fit:min-h-0 planner-fit:flex-col">
           {/* CALENDAR TOOLBAR */}
 
           <div
-            className="overflow-hidden rounded-2xl border border-border shadow-sm"
+          className="shrink-0 overflow-hidden rounded-2xl border border-border shadow-sm"
             style={{
               background:
                 "linear-gradient(115deg, var(--secondary) 0%, var(--background) 55%, var(--accent) 100%)",
@@ -1229,9 +1695,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                     <h2 className="text-lg font-semibold tracking-tight text-foreground">
                       {calendarView === "day"
                         ? formatDate(selectedDate)
-                        : formatMonthYear(
-                            calendarView === "month" ? selectedDate : currentWeek
-                          )}
+                        : formatMonthYear(selectedDate)}
                     </h2>
 
                     <button
@@ -1347,7 +1811,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                     return (
                       <div
                         key={day.key}
-                        className={`flex min-h-20 items-center justify-center gap-2 rounded-xl px-2 py-2.5 transition ${
+                        className={`flex min-h-20 planner-tight:min-h-12 items-center justify-center gap-2 rounded-xl px-2 py-2.5 transition ${
                           isSelected
                             ? "bg-secondary text-primary shadow-sm"
                             : "bg-card/65 text-secondary-foreground"
@@ -1370,7 +1834,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
               </div>
 
               {calendarView === "month" ? (
-                <div className="mt-3 grid grid-cols-7 gap-px overflow-hidden rounded-2xl border border-border bg-border shadow-sm">
+                <div className="mt-3 grid grid-cols-7 content-start gap-px overflow-hidden rounded-2xl border border-border bg-border shadow-sm planner-fit:min-h-0 planner-fit:flex-1 planner-fit:overflow-y-auto">
                   {miniCalendarDays.map((date) => {
                     const dateKey = dateToKey(date);
                     const dayNumber = (date.getDay() + 6) % 7;
@@ -1408,18 +1872,30 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                         </button>
 
                         <div className="space-y-1">
-                          {showLectures && dayLectures.slice(0, 2).map((lecture) => (
-                            <button
-                              key={`month-lecture-${dateKey}-${lecture.id}`}
-                              type="button"
-                              onClick={(event) => openPopup(event, "lecture", lecture)}
-                              title={lecture.course_name}
-                              className="block w-full truncate rounded px-1 py-0.5 text-left text-[8px] font-semibold text-primary sm:text-[9px]"
-                              style={{ backgroundColor: hexToRgba(lecture.course_color, 0.16) }}
-                            >
-                              {lecture.course_code || lecture.course_name}
-                            </button>
-                          ))}
+                          {showLectures && dayLectures.slice(0, 2).map((lecture) => {
+                            const mark = getLectureMark(lecture.id, dateKey);
+                            return (
+                              <button
+                                key={`month-lecture-${dateKey}-${lecture.id}`}
+                                type="button"
+                                onClick={(event) =>
+                                  openPopup(event, "lecture", lecture, dateKey)
+                                }
+                                title={
+                                  mark
+                                    ? `${lecture.course_name} (${mark.status})`
+                                    : lecture.course_name
+                                }
+                                className={`block w-full truncate rounded px-1 py-0.5 text-left text-[8px] font-semibold text-primary sm:text-[9px] ${
+                                  mark && mark.status !== "completed" ? "opacity-60" : ""
+                                } ${mark?.status === "cancelled" ? "line-through" : ""}`}
+                                style={{ backgroundColor: hexToRgba(lecture.course_color, 0.16) }}
+                              >
+                                {lecture.course_code || lecture.course_name}
+                                {mark ? ` · ${LECTURE_MARK_LABELS[mark.status]}` : ""}
+                              </button>
+                            );
+                          })}
                           {showStudySessions && daySessions.slice(0, 2).map((session) => (
                             <button
                               key={`month-session-${session.id}`}
@@ -1442,13 +1918,23 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                               {item.title}
                             </button>
                           ))}
+                           {getMarkersForDay(dateKey).slice(0, 2).map((marker) => (
+                            <PlannerMarkerChip
+                              key={`month-marker-${marker.type}-${marker.id}`}
+                              marker={marker}
+                              onOpen={() => navigate(marker.to)}
+                            />
+                          ))}
                         </div>
                       </div>
                     );
                   })}
                 </div>
               ) : (
-              <div className="mt-3 overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+              <div
+                ref={calendarBodyRef}
+                className="mt-3 overflow-hidden rounded-2xl border border-border bg-card shadow-sm planner-fit:min-h-0 planner-fit:flex-1 planner-fit:overflow-y-auto"
+              >
                 {/* =================================================
                     CALENDAR BODY
                 ================================================== */}
@@ -1547,10 +2033,10 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                               now.getMinutes();
 
                             const calendarStart =
-                              7 * 60;
+                              FIRST_HOUR * 60;
 
                             const calendarEnd =
-                              21 * 60;
+                              (FIRST_HOUR + TIME_SLOTS.length) * 60;
 
                             if (
                               minutes < calendarStart ||
@@ -1612,12 +2098,16 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
 
                               const isSelected =
                                 selectedLecture?.id ===
-                                lecture.id;
+                                  lecture.id &&
+                                selectedLectureDate === day.key;
+
+                              const mark = getLectureMark(lecture.id, day.key);
 
                               return (
                                 <button
                                   key={`lecture-${lecture.id}`}
                                   type="button"
+                                  data-item-id={`${lecture.id}-${day.key}`}
                                   onPointerDown={(event) =>
                                     event.stopPropagation()
                                   }
@@ -1625,7 +2115,8 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                                     openPopup(
                                       event,
                                       "lecture",
-                                      lecture
+                                      lecture,
+                                      day.key
                                     )
                                   }
                                   className={`group absolute left-1.5 right-1.5 z-20 overflow-hidden rounded-xl border text-left transition-all duration-200 ${
@@ -1634,6 +2125,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                                       : "shadow-sm hover:-translate-y-0.5 hover:shadow-md"
                                   }`}
                                   style={{
+                                    opacity: mark && mark.status !== "completed" ? 0.7 : 1,
                                     top: top + 2,
                                     height:
                                       Math.max(
@@ -1661,22 +2153,35 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                                   >
                                     {/* COURSE CODE */}
 
-                                    <div
-                                      className="truncate text-[9px] font-extrabold uppercase tracking-[0.12em]"
-                                      style={{
-                                        color:
-                                          lectureColor,
-                                      }}
-                                    >
-                                      {
-                                        lecture.course_code
-                                      }
+                                    <div className="flex items-center gap-1.5">
+                                      <div
+                                        className="min-w-0 flex-1 truncate text-[9px] font-extrabold uppercase tracking-[0.12em]"
+                                        style={{ color: lectureColor }}
+                                      >
+                                        {lecture.course_code}
+                                      </div>
+
+                                      {mark && (
+                                        <span
+                                          className={`shrink-0 rounded px-1 py-0.5 text-[7px] font-bold uppercase tracking-wide ${
+                                            mark.status === "missed"
+                                              ? "bg-destructive/15 text-destructive"
+                                              : mark.status === "completed"
+                                                ? "bg-success/15 text-success"
+                                                : "bg-muted text-muted-foreground"
+                                          }`}
+                                        >
+                                          {LECTURE_MARK_LABELS[mark.status]}
+                                        </span>
+                                      )}
                                     </div>
 
                                     {/* COURSE NAME */}
 
                                       <div
-                                        className="mt-1 line-clamp-2 text-[9px] font-bold leading-tight text-foreground"
+                                        className={`mt-1 line-clamp-2 text-[9px] font-bold leading-tight text-foreground ${
+                                          mark?.status === "cancelled" ? "line-through" : ""
+                                        }`}
                                         title={lecture.course_name}
                                       >
                                       {
@@ -1774,6 +2279,7 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                                 <button
                                   key={`session-${session.id}`}
                                   type="button"
+                                  data-item-id={session.id}
                                   onPointerDown={(event) =>
                                     event.stopPropagation()
                                   }
@@ -1915,6 +2421,30 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                             }
                           )}
 
+                         {/* =================================================
+                            EXAMS, ASSIGNMENTS, TASKS AND EVENTS WITHOUT TIMES
+                        ================================================== */}
+
+                        {getMarkersForDay(day.key).map((marker) => {
+                          const top =
+                            ((marker.startMin - FIRST_HOUR * 60) / 60) *
+                            ROW_HEIGHT;
+                          const height = Math.max(
+                            ((marker.endMin - marker.startMin) / 60) *
+                              ROW_HEIGHT,
+                            36
+                          );
+
+                          return (
+                            <PlannerMarkerBlock
+                              key={`marker-${marker.type}-${marker.id}`}
+                              marker={marker}
+                              top={top}
+                              height={height}
+                              onOpen={() => navigate(marker.to)}
+                            />
+                          );
+                        })}  
                         {/* =================================================
                             PERSONAL EVENTS
                         ================================================== */}
@@ -2126,6 +2656,15 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                   </button>
                 </div>
               </div>
+
+              {selectedLectureDate && (
+                <LectureDateMarker
+                  entry={selectedLecture}
+                  dateKey={selectedLectureDate}
+                  mark={selectedLectureMark}
+                  onChanged={() => setRefreshKey((k) => k + 1)}
+                />
+              )}
 
               <div className="grid grid-cols-2 gap-2 px-3 py-3">
                 <div className="flex min-w-0 items-start gap-2 rounded-lg bg-background p-2">
@@ -2361,7 +2900,50 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
                   </div>
                 )}
               </div>
-
+                        {/* STATUS ACTIONS: mark completed / skip / undo */}
+          {selectedStudySession.status !== "rescheduled" && (
+            <div className="mx-3 mt-2 flex items-center gap-2 rounded-xl bg-muted/50 px-3 py-2">
+              {selectedStudySession.status === "planned" ||
+              selectedStudySession.status === "in_progress" ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => handleSetStatus("completed")}
+                    disabled={isUpdatingStatus}
+                    className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-success px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+                  >
+                    <Check className="h-3.5 w-3.5" />
+                    Mark completed
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSetStatus("skipped")}
+                    disabled={isUpdatingStatus}
+                    className="rounded-lg px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:bg-muted disabled:opacity-60"
+                  >
+                    Skip
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="flex-1 text-xs font-medium text-foreground">
+                    {selectedStudySession.status === "completed"
+                      ? "You completed this session."
+                      : "You skipped this session."}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => handleSetStatus("planned")}
+                    disabled={isUpdatingStatus}
+                    className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:bg-muted disabled:opacity-60"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    Undo
+                  </button>
+                </>
+              )}
+            </div>
+          )}
           {/* DELETE ERROR */}
 
           {deleteError && (
@@ -2414,31 +2996,40 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
               </div>
             )}
 
-            {/* RESCHEDULE */}
-            <button
-              type="button"
-              onClick={() => {
-                setReschedulingSession(selectedStudySession);
-                closePopup();
-              }}
-              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-secondary-foreground transition hover:bg-muted"
-            >
-              <CalendarClock className="h-3.5 w-3.5" />
-              Reschedule
-            </button>
+                        {selectedStudySession.is_edit_locked ? (
+              <p className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <Lock className="h-3.5 w-3.5" />
+                Locked: ended over 24 hours ago
+              </p>
+            ) : (
+              <>
+                {/* RESCHEDULE */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReschedulingSession(selectedStudySession);
+                    closePopup();
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-secondary-foreground transition hover:bg-muted"
+                >
+                  <CalendarClock className="h-3.5 w-3.5" />
+                  Reschedule
+                </button>
 
-            {/* EDIT */}
-            <button
-              type="button"
-              onClick={() => {
-                setEditingSession(selectedStudySession);
-                closePopup();
-              }}
-              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-secondary"
-            >
-              <Pencil className="h-3.5 w-3.5" />
-              Edit
-            </button>
+                {/* EDIT */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingSession(selectedStudySession);
+                    closePopup();
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-secondary"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  Edit
+                </button>
+              </>
+            )}
           </div>
 
             </>
@@ -2613,7 +3204,12 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
         session={editingSession}
         courses={courses}
         onClose={() => setEditingSession(null)}
-        onSessionUpdated={() => setRefreshKey((k) => k + 1)}
+        onSessionUpdated={(session) => {
+          setRefreshKey((k) => k + 1);
+          toast.success("Study session updated", {
+            description: getCourseNameForToast(session.course_id),
+          });
+        }}
       />
 
       {/* RESCHEDULE STUDY SESSION DIALOG */}
@@ -2622,7 +3218,12 @@ const [deleteError, setDeleteError] = useState<string | null>(null);
         session={reschedulingSession}
         courses={courses}
         onClose={() => setReschedulingSession(null)}
-        onSessionRescheduled={() => setRefreshKey((k) => k + 1)}
+        onSessionRescheduled={(session) => {
+          setRefreshKey((k) => k + 1);
+          toast.success("Study session rescheduled", {
+            description: getCourseNameForToast(session.course_id),
+          });
+        }}
       />
     </div>
   );

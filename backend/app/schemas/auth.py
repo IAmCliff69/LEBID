@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field
-
+from datetime import datetime
 
 class RegisterRequest(BaseModel):
     """Data required to create a new account."""
@@ -24,8 +24,10 @@ class UserResponse(BaseModel):
     semester: str | None
     academic_year: str | None
     is_active: bool
-    has_gemini_api_key: bool = False   # ← add this
+    has_gemini_api_key: bool = False  
     onboarding_completed: bool = False
+    has_avatar: bool = False
+    avatar_updated_at: datetime | None = None
     model_config = {"from_attributes": True}
 
 

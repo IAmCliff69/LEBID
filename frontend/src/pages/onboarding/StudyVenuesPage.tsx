@@ -81,11 +81,15 @@ export default function StudyVenuesPage() {
     }
   }, [studyPlan, extraction, navigate]);
 
-  // After the success message shows for a moment, go to the Dashboard.
+  // After the success message shows for a moment, show the "You're all set"
+  // page (its button then opens the Dashboard).
   useEffect(() => {
     if (!activated) return;
     const timer = window.setTimeout(() => {
-      navigate("/dashboard", { replace: true });
+      navigate("/onboarding/finish", {
+        replace: true,
+        state: { planActivated: true },
+      });
     }, 900);
     return () => window.clearTimeout(timer);
   }, [activated, navigate]);

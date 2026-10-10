@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router-dom";
@@ -35,8 +35,21 @@ const SLIDE = { duration: 0.7, ease: [0.4, 0, 0.2, 1] as const };
 
 const friendlyFont = { fontFamily: '"Original Surfer", cursive' };
 
+// True while the window is at least `minWidth` pixels wide. It updates live
+// when the window is resized, so the page switches layout without a reload.
+function useMinWidth(minWidth: number): boolean {
+  return useSyncExternalStore(
+    (onChange) => {
+      const query = window.matchMedia(`(min-width: ${minWidth}px)`);
+      query.addEventListener("change", onChange);
+      return () => query.removeEventListener("change", onChange);
+    },
+    () => window.matchMedia(`(min-width: ${minWidth}px)`).matches
+  );
+}
+
 export default function AuthPage({
-  initialMode: _initialMode,
+  initialMode,
 }: {
   initialMode: "login" | "register";
 }) {
@@ -44,8 +57,11 @@ export default function AuthPage({
   const { setUser } = useAuth();
   const prefersReducedMotion = useReducedMotion();
   const motionSafe = !prefersReducedMotion;
-
-  const [authView, setAuthView] = useState<AuthView>("default");
+    // Below 768px the page shows ONE panel (no sliding, no orange panel)
+  const isWide = useMinWidth(768);
+  const [authView, setAuthView] = useState<AuthView>(
+    initialMode === "register" ? "name" : "default"
+  );
   const [serverError, setServerError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [collectedName, setCollectedName] = useState("");
@@ -98,14 +114,14 @@ export default function AuthPage({
             GIRL PANEL — slides left ↔ right
             ════════════════════════════════════════ */}
         <motion.div
-          className="absolute top-0 h-full w-full sm:w-1/2"
+          className="absolute top-0 h-full w-full md:w-1/2"
           style={{
             backgroundImage: "url('/background.png')",
             backgroundSize: "cover",
             backgroundPosition: "center",
           }}
           initial={false}
-          animate={{ left: isName ? "50%" : "0%" }}
+          animate={{ left: isName && isWide ? "50%" : "0%" }}
           transition={motionSafe ? SLIDE : { duration: 0 }}
         >
           <div
@@ -134,11 +150,11 @@ export default function AuthPage({
                   </motion.div>
 
                   {/* Centered content */}
-                  <div className="flex min-h-0 flex-1 flex-col items-center justify-center">
+                  <div className="flex min-h-0 flex-1 flex-col items-center overflow-y-auto [justify-content:safe_center]">
                     <motion.div
                       layoutId="main-logo"
                       transition={SLIDE}
-                      className="mb-3 w-32 sm:mb-4 sm:w-40"
+                      className="mb-3 w-32 sm:mb-4 sm:w-40 [@media(max-height:620px)]:hidden"
                     >
                       <LebidLogo className="w-full drop-shadow-md" />
                     </motion.div>
@@ -155,7 +171,7 @@ export default function AuthPage({
                     >
                       Welcome back!
                     </h1>
-                    <p className="mb-5 text-center text-base text-white/90 drop-shadow sm:mb-6 sm:text-lg">
+                                        <p className="mb-5 text-center text-base text-white/90 drop-shadow sm:mb-6 sm:text-lg [@media(max-height:620px)]:hidden">
                       Your planner is waiting.
                     </p>
 
@@ -178,8 +194,8 @@ export default function AuthPage({
                           placeholder="you@example.com"
                           aria-invalid={!!loginForm.formState.errors.email}
                           className={cn(
-                            "w-full rounded-lg border border-white/40 bg-white/90 px-3.5 py-2.5 text-sm text-foreground outline-none transition",
-                            "placeholder:text-muted-foreground",
+                            "w-full rounded-lg border border-white/40 bg-white/90 px-3.5 py-2.5 text-sm text-[#3d3029] outline-none transition",
+                            "placeholder:text-[#3d3029]/50",
                             "focus:border-white focus:ring-2 focus:ring-white/40",
                             loginForm.formState.errors.email &&
                               "border-destructive focus:border-destructive"
@@ -219,8 +235,8 @@ export default function AuthPage({
                             placeholder="••••••••"
                             aria-invalid={!!loginForm.formState.errors.password}
                             className={cn(
-                              "w-full rounded-lg border border-white/40 bg-white/90 px-3.5 py-2.5 pr-10 text-sm text-foreground outline-none transition",
-                              "placeholder:text-muted-foreground",
+                              "w-full rounded-lg border border-white/40 bg-white/90 px-3.5 py-2.5 pr-10 text-sm text-[#3d3029] outline-none transition",
+                              "placeholder:text-[#3d3029]/50",
                               "focus:border-white focus:ring-2 focus:ring-white/40",
                               loginForm.formState.errors.password &&
                                 "border-destructive focus:border-destructive"
@@ -272,6 +288,16 @@ export default function AuthPage({
                           : "Sign In"}
                       </button>
                     </form>
+                    <p className="mt-4 text-center text-sm text-white/90 drop-shadow md:hidden">
+                      New here?{" "}
+                      <button
+                        type="button"
+                        onClick={handleGetStarted}
+                        className="font-semibold underline underline-offset-2"
+                      >
+                        Create an account
+                      </button>
+                    </p>
                   </div>
                 </motion.div>
               ) : (
@@ -281,12 +307,12 @@ export default function AuthPage({
                   animate={{ opacity: 1, y: 0 }}
                   exit={motionSafe ? { opacity: 0, y: -12 } : undefined}
                   transition={{ duration: 0.35, delay: 0.15 }}
-                  className="flex h-full flex-col items-center justify-center text-center"
+                  className="flex h-full flex-col items-center overflow-y-auto text-center [justify-content:safe_center]"
                 >
                   <motion.div
                     layoutId="main-logo"
                     transition={SLIDE}
-                    className="mb-5 w-36 sm:w-48"
+                    className="mb-5 w-36 sm:w-48 [@media(max-height:620px)]:hidden"
                   >
                     <LebidLogo className="w-full drop-shadow-md brightness-0 invert" />
                   </motion.div>
@@ -306,8 +332,8 @@ export default function AuthPage({
                       value={collectedName}
                       onChange={(e) => setCollectedName(e.target.value)}
                       className={cn(
-                        "w-full rounded-lg border border-white/40 bg-white/90 px-3.5 py-2.5 text-sm text-foreground outline-none transition",
-                        "placeholder:text-muted-foreground",
+                        "w-full rounded-lg border border-white/40 bg-white/90 px-3.5 py-2.5 text-sm text-[#3d3029] outline-none transition",
+                        "placeholder:text-[#3d3029]/50",
                         "focus:border-white focus:ring-2 focus:ring-white/40"
                       )}
                     />
@@ -325,6 +351,16 @@ export default function AuthPage({
                       <ArrowRight className="size-4" />
                     </button>
                   </div>
+                  <p className="mt-4 text-center text-sm text-white/90 drop-shadow md:hidden">
+                    Already have an account?{" "}
+                    <button
+                      type="button"
+                      onClick={handleBackToDefault}
+                      className="font-semibold underline underline-offset-2"
+                    >
+                      Sign in
+                    </button>
+                  </p>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -335,7 +371,7 @@ export default function AuthPage({
             SOLID PANEL — slides right ↔ left
             ════════════════════════════════════════ */}
         <motion.div
-          className="absolute top-0 h-full w-full bg-primary sm:w-1/2"
+          className="absolute top-0 hidden h-full w-1/2 bg-primary md:block"
           initial={false}
           animate={{ left: isName ? "0%" : "50%" }}
           transition={motionSafe ? SLIDE : { duration: 0 }}

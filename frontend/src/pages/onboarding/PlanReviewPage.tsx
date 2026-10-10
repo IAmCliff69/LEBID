@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "motion/react";
-import { ArrowRight, Loader2, Pencil, Send, Sparkles, Trash2 } from "lucide-react";
+import { ArrowRight, Loader2, Pencil, Send, Sparkles, Trash2, Check } from "lucide-react";
 
 import { useOnboarding } from "@/context/OnboardingContext";
 import LebidLogo from "@/components/brand/LebidLogo";
@@ -30,7 +30,9 @@ interface DayItem {
   end: string;
   title: string;
   detail: string | null;
-  sessionIndex?: number; // only study sessions have this (their place in the plan)
+  sessionIndex?: number; 
+  outsideHours?: boolean; // a study session before 07:00 or after 22:00
+  needsConfirmation?: boolean; // the student has not said "keep" yet// only study sessions have this (their place in the plan)
 }
 
 interface DayGroup {
@@ -127,6 +129,8 @@ export default function PlanReviewPage() {
         title: s.course_name,
         detail: s.topic,
         sessionIndex: index,
+        outsideHours: s.outside_usual_hours,
+        needsConfirmation: s.needs_confirmation,
       });
     });
 
@@ -149,6 +153,21 @@ export default function PlanReviewPage() {
     setEditingIndex(null);
     setAiResult(null);
   };
+
+    // "Keep" for a session outside the usual hours
+  const handleKeepSession = (index: number) => {
+    setStudyPlan({
+      ...studyPlan,
+      sessions: studyPlan.sessions.map((s, i) =>
+        i === index ? { ...s, needs_confirmation: false } : s
+      ),
+    });
+  };
+
+  // How many sessions outside the usual hours still wait for Keep / Remove
+  const pendingCount = studyPlan.sessions.filter(
+    (s) => s.needs_confirmation
+  ).length;
 
   const handleRemoveSession = (index: number) => {
     setRemovedStack((stack) => [
@@ -240,6 +259,7 @@ export default function PlanReviewPage() {
   const handleLooksGood = () => {
     // The Study Venues page (Phase 13) is built next. Until it exists,
     // this route falls back to the Dashboard.
+    if (pendingCount > 0) return;
     navigate("/onboarding/study-venues", { replace: true });
   };
 
@@ -340,9 +360,31 @@ export default function PlanReviewPage() {
                             </p>
                           )}
 
+                           {item.outsideHours && (
+                            <p className="mt-1 text-xs font-medium text-warning">
+                              {item.start < "12:00" ? "Early morning" : "Late night"}
+                              : outside your usual hours.
+                              {item.needsConfirmation
+                                ? " Keep it or remove it."
+                                : " You chose to keep it."}
+                            </p>
+                          )}
+
                           {/* Only study sessions can be changed; classes are fixed */}
                           {sessionIndex !== undefined && (
                             <div className="mt-1.5 flex gap-4">
+                              {item.needsConfirmation && (
+                                <button
+                                  type="button"
+                                  disabled={isAdjusting}
+                                  onClick={() => handleKeepSession(sessionIndex)}
+                                  aria-label={`Keep the ${item.title} study session on ${DAY_NAMES[group.day]}`}
+                                  className="flex items-center gap-1 text-xs font-semibold text-success transition-colors hover:opacity-80"
+                                >
+                                  <Check className="size-3" aria-hidden="true" />
+                                  Keep
+                                </button>
+                              )}
                               <button
                                 type="button"
                                 disabled={isAdjusting}
@@ -528,6 +570,17 @@ export default function PlanReviewPage() {
             )}
           </form>
 
+          {pendingCount > 0 && (
+            <p
+              role="status"
+              className="mb-3 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs font-medium text-warning"
+            >
+              {pendingCount === 1
+                ? "1 study session is outside your usual hours (before 7 AM or after 10 PM)."
+                : `${pendingCount} study sessions are outside your usual hours (before 7 AM or after 10 PM).`}{" "}
+              Keep or remove each one to continue.
+            </p>
+          )}
           <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row">
             <button
               type="button"
@@ -539,7 +592,9 @@ export default function PlanReviewPage() {
             <button
               type="button"
               onClick={handleLooksGood}
-              disabled={studyPlan.sessions.length === 0 || isAdjusting}
+              disabled={
+                studyPlan.sessions.length === 0 || isAdjusting || pendingCount > 0
+              }
               className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-foreground text-sm font-semibold text-background transition-all hover:opacity-90 active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-foreground/30 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               LOOKS GOOD

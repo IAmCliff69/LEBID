@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
@@ -49,6 +49,17 @@ def verify_course_ownership(course_id: str, user_id: str, db: Session) -> Course
         )
     return course
 
+LOCKED_MESSAGE = (
+    "This session ended more than 24 hours ago, so it can no longer be "
+    "edited or rescheduled."
+)
+
+
+def session_has_started(session: StudySession) -> bool:
+    """True once the session's start time has passed."""
+    starts_at = datetime.combine(session.session_date, session.start_time)
+    return datetime.now() >= starts_at
+
 
 @router.post("", response_model=StudySessionResponse, status_code=status.HTTP_201_CREATED)
 def create_study_session(
@@ -62,22 +73,31 @@ def create_study_session(
     """
     verify_course_ownership(payload.course_id, current_user.id, db)
 
-    session = StudySession(
-        user_id=current_user.id,
-        course_id=payload.course_id,
-        topic=payload.topic,
-        session_date=payload.session_date,
-        start_time=payload.start_time,
-        end_time=payload.end_time,
-        venue=payload.venue,
-        priority=payload.priority,
-        notes=payload.notes,
-        is_ai_generated=payload.is_ai_generated,
-    )
-    db.add(session)
+        # One session per week for "repeat_weeks" weeks (1 = just this one).
+    # They are saved together, so either all of them exist or none do.
+    created_sessions = []
+    for week in range(payload.repeat_weeks):
+        session = StudySession(
+            user_id=current_user.id,
+            course_id=payload.course_id,
+            topic=payload.topic,
+            session_date=payload.session_date + timedelta(weeks=week),
+            start_time=payload.start_time,
+            end_time=payload.end_time,
+            venue=payload.venue,
+            priority=payload.priority,
+            notes=payload.notes,
+            is_ai_generated=payload.is_ai_generated,
+        )
+        db.add(session)
+        created_sessions.append(session)
+
     db.commit()
-    db.refresh(session)
-    return session
+
+    # Return the first session (the one on the date the student picked)
+    first_session = created_sessions[0]
+    db.refresh(first_session)
+    return first_session
 
 
 @router.get("", response_model=list[StudySessionResponse])
@@ -229,6 +249,20 @@ def update_study_session(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No fields provided to update.",
         )
+            # After 24 hours, only the status may still change (completed / skipped / undo)
+    changes_details = set(updates) - {"status"}
+    if changes_details and session.is_edit_locked:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=LOCKED_MESSAGE,
+        )
+
+    # A session that has not started yet cannot be marked as completed
+    if updates.get("status") == "completed" and not session_has_started(session):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You can mark a session as completed once it has started.",
+        )
 
     if "course_id" in updates and updates["course_id"] is not None:
         verify_course_ownership(updates["course_id"], current_user.id, db)
@@ -256,6 +290,11 @@ def reschedule_study_session(
     via rescheduled_from_id, so the AI can see rescheduling patterns.
     """
     original = get_session_or_404(session_id, current_user.id, db)
+    if original.is_edit_locked:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=LOCKED_MESSAGE,
+        )
     verify_course_ownership(payload.course_id, current_user.id, db)
 
     # Mark original as rescheduled

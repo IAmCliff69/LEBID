@@ -190,3 +190,88 @@ def extract_timetable_from_image(
 def extract_timetable_from_pdf(file_bytes: bytes, api_key: str) -> dict[str, Any]:
     """Sends a timetable PDF to Gemini using the user's key."""
     return _extract_timetable(file_bytes, "application/pdf", api_key)
+
+def _rate_limit_message(error_text: str) -> str:
+    """A friendly message for Google's 429 "too many requests" answer."""
+    lowered = error_text.lower()
+
+    retry_match = re.search(
+        r"retry in (\d+)(?:\.\d+)?\s*s|retrydelay\W+(\d+)s", lowered
+    )
+    wait_seconds = (
+        int(retry_match.group(1) or retry_match.group(2)) if retry_match else None
+    )
+
+    # Google names the quota that ran out. "PerDay" means the daily free limit.
+    is_daily_limit = "perday" in lowered or (
+        wait_seconds is not None and wait_seconds >= 7200
+    )
+
+    if is_daily_limit:
+        if wait_seconds is not None and wait_seconds >= 7200:
+            return (
+                "You've reached today's free AI limit. It resets in about "
+                f"{round(wait_seconds / 3600)} hours. The rest of Lebid keeps "
+                "working, and you can also add a different Gemini key in Settings."
+            )
+        return (
+            "You've reached today's free AI limit. It resets tomorrow. The rest "
+            "of Lebid keeps working, and you can also add a different Gemini key "
+            "in Settings."
+        )
+
+    if wait_seconds is None:
+        return (
+            "The AI has hit its usage limit for the moment. Please try again in "
+            "a few minutes."
+        )
+    if wait_seconds < 120:
+        return (
+            "The AI is getting a lot of requests right now. Please wait about "
+            f"{max(wait_seconds, 1)} seconds and try again."
+        )
+    return (
+        "The AI is getting a lot of requests right now. Please try again in "
+        f"about {round(wait_seconds / 60)} minutes."
+    )
+
+
+def explain_gemini_error(error: Exception, action: str = "answer") -> tuple[int, str]:
+    """
+    Turns any error from Google's Gemini service into
+    (HTTP status code, a friendly message for the student).
+
+    "action" finishes the sentence in the generic message, for example
+    "build your study plan".
+    """
+    # Usage limit reached
+    if isinstance(error, errors.ClientError) and error.code == 429:
+        return 429, _rate_limit_message(str(error))
+
+    # Google's side is struggling (500, 503 ...)
+    if isinstance(error, errors.ServerError):
+        return (
+            503,
+            "The AI service is overloaded right now. Please try again in a moment.",
+        )
+
+    # The student's key was refused
+    if isinstance(error, errors.ClientError) and error.code in (401, 403):
+        return (
+            400,
+            "Your Gemini API key was rejected by Google. Please check it and "
+            "update it in Settings.",
+        )
+
+    # We could not reach Google at all
+    error_name = type(error).__name__.lower()
+    if isinstance(error, (TimeoutError, ConnectionError)) or any(
+        word in error_name for word in ("timeout", "connect", "network")
+    ):
+        return (
+            503,
+            "We couldn't reach the AI service. Please check your internet "
+            "connection and try again.",
+        )
+
+    return 502, f"The AI couldn't {action} just now. Please try again in a moment."

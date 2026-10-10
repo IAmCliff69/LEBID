@@ -1,6 +1,6 @@
 from datetime import date, timedelta, datetime, timezone
 from sqlalchemy.orm import Session
-
+from app.models.notification_preferences import NotificationPreferences
 from app.models.notification import Notification
 from app.models.assignment import Assignment
 from app.models.exam import Exam
@@ -49,6 +49,16 @@ def generate_notifications(user_id: str, db: Session) -> int:
     now = datetime.now(timezone.utc)
     created_count = 0
 
+        # Which kinds of notifications does this student want? (default: all)
+    preferences = (
+        db.query(NotificationPreferences)
+        .filter(NotificationPreferences.user_id == user_id)
+        .first()
+    )
+    deadlines_on = preferences.deadline_reminders if preferences else True
+    exams_on = preferences.exam_reminders if preferences else True
+    missed_sessions_on = preferences.missed_session_alerts if preferences else True
+
     # --- Assignment deadline notifications ---
     upcoming_assignments = (
         db.query(Assignment)
@@ -64,7 +74,7 @@ def generate_notifications(user_id: str, db: Session) -> int:
         .all()
     )
 
-    for assignment in upcoming_assignments:
+    for assignment in (upcoming_assignments if deadlines_on else []):
         days_until = (assignment.deadline.date() - today).days
 
         if days_until <= 3:
@@ -105,7 +115,7 @@ def generate_notifications(user_id: str, db: Session) -> int:
         .all()
     )
 
-    for exam in upcoming_exams:
+    for exam in (upcoming_exams if exams_on else []):
         days_until = (exam.exam_date - today).days
 
         if days_until <= 7:
@@ -146,7 +156,7 @@ def generate_notifications(user_id: str, db: Session) -> int:
         .all()
     )
 
-    for session in missed_sessions:
+    for session in (missed_sessions if missed_sessions_on else []):
         notif_type = "missed_session"
         if not notification_exists(user_id, notif_type, session.id, db):
             db.add(Notification(
@@ -173,7 +183,7 @@ def generate_notifications(user_id: str, db: Session) -> int:
         .all()
     )
 
-    for task in overdue_tasks:
+    for task in (overdue_tasks if deadlines_on else []):
         notif_type = "overdue_task"
         if not notification_exists(user_id, notif_type, task.id, db):
             db.add(Notification(

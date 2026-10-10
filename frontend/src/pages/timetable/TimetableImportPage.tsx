@@ -7,12 +7,14 @@ import {
   confirmImport,
   getPendingImport,
   discardImport,
+  previewReplace,
 } from "@/api/timetableImport";
 import type {
   ExtractedEntry,
   ConfirmEntryRequest,
   ExtractionResponse,
   PendingImport,
+  ReplacePreview,
 } from "@/api/timetableImport";
 import { getCourses } from "@/api/courses";
 import type { Course } from "@/api/courses";
@@ -20,6 +22,8 @@ import type { Course } from "@/api/courses";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TimePicker } from "@/components/ui/time-picker";
+import ReplaceTimetableDialog from "@/components/timetable/ReplaceTimetableDialog";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -112,6 +116,11 @@ export default function TimetableImportPage() {
 
   const [coursesCreated, setCoursesCreated] = useState(0);
   const [duplicatesSkipped, setDuplicatesSkipped] = useState(0);
+    // A summary of what replacing the old timetable removed (shown when done)
+  const [replaceSummary, setReplaceSummary] = useState("");
+  // The "replace your timetable?" pop-up
+  const [replacePreview, setReplacePreview] = useState<ReplacePreview | null>(null);
+  const [pendingEntries, setPendingEntries] = useState<ConfirmEntryRequest[]>([]);
   const queryClient = useQueryClient();
 
   // An earlier upload that was never confirmed (so it can be resumed)
@@ -294,7 +303,57 @@ export default function TimetableImportPage() {
 
   // ── Confirm handler ────────────────────────────────────────────────────────
 
-    const handleConfirm = async () => {
+      const getErrorText = (err: unknown): string => {
+    const error = err as { response?: { data?: { detail?: string } } };
+    return (
+      error.response?.data?.detail ??
+      "Failed to save entries. Please check your data and try again."
+    );
+  };
+
+  // Saves the entries and moves to the "done" screen
+  const saveTimetable = async (
+    entries: ConfirmEntryRequest[],
+    options: { replace_existing?: boolean; delete_course_ids?: string[] } = {}
+  ) => {
+    const result = await confirmImport(importId, entries, options);
+    setSavedCount(result.saved_count);
+    setCoursesCreated(result.courses_created);
+    setDuplicatesSkipped(result.duplicates_skipped);
+
+    // What the replacement removed, in plain words
+    const parts: string[] = [];
+    if (result.classes_removed > 0) {
+      parts.push(
+        `${result.classes_removed} old class${result.classes_removed === 1 ? " was" : "es were"} replaced`
+      );
+    }
+    if (result.sessions_removed > 0) {
+      parts.push(
+        `${result.sessions_removed} upcoming study session${result.sessions_removed === 1 ? "" : "s"} planned around the old timetable ${result.sessions_removed === 1 ? "was" : "were"} removed. You can ask the AI Assistant to plan new ones`
+      );
+    }
+    if (result.courses_removed > 0) {
+      parts.push(
+        `${result.courses_removed} course${result.courses_removed === 1 ? "" : "s"} no longer in your timetable ${result.courses_removed === 1 ? "was" : "were"} removed`
+      );
+    }
+    if (result.courses_kept > 0) {
+      parts.push(
+        `${result.courses_kept} course${result.courses_kept === 1 ? "" : "s"} not in the new timetable ${result.courses_kept === 1 ? "was" : "were"} kept because ${result.courses_kept === 1 ? "it still has" : "they still have"} work linked`
+      );
+    }
+    setReplaceSummary(parts.length > 0 ? `${parts.join(". ")}.` : "");
+
+    setPending(null);
+
+    // Make the rest of the app (dashboard, planner, courses, ...) show the new data
+    await queryClient.invalidateQueries();
+
+    setStage("done");
+  };
+
+  const handleConfirm = async () => {
     setConfirmError(null);
 
     if (drafts.length === 0) {
@@ -327,22 +386,34 @@ export default function TimetableImportPage() {
         notes: d.notes || null,
       }));
 
-      const result = await confirmImport(importId, entries);
-      setSavedCount(result.saved_count);
-      setCoursesCreated(result.courses_created);
-      setDuplicatesSkipped(result.duplicates_skipped);
-      setPending(null);
+      // Already have a timetable? Then ask before replacing it.
+      const preview = await previewReplace(importId, entries);
+      if (preview.existing_class_count > 0) {
+        setPendingEntries(entries);
+        setReplacePreview(preview);
+        return; // the pop-up takes it from here
+      }
 
-      // Make the rest of the app (dashboard, courses, ...) show the new data
-      await queryClient.invalidateQueries();
-
-      setStage("done");
+      await saveTimetable(entries);
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { detail?: string } } };
-      setConfirmError(
-        error.response?.data?.detail ??
-        "Failed to save entries. Please check your data and try again."
-      );
+      setConfirmError(getErrorText(err));
+    } finally {
+      setConfirming(false);
+    }
+  };
+
+  // The student agreed in the pop-up: replace the old timetable
+  const handleReplaceConfirmed = async (deleteCourseIds: string[]) => {
+    setConfirming(true);
+    try {
+      await saveTimetable(pendingEntries, {
+        replace_existing: true,
+        delete_course_ids: deleteCourseIds,
+      });
+      setReplacePreview(null);
+    } catch (err: unknown) {
+      setReplacePreview(null);
+      setConfirmError(getErrorText(err));
     } finally {
       setConfirming(false);
     }
@@ -631,6 +702,7 @@ export default function TimetableImportPage() {
                 ` ${coursesCreated} new course${coursesCreated === 1 ? " was" : "s were"} created for you.`}
               {duplicatesSkipped > 0 &&
                 ` ${duplicatesSkipped} class${duplicatesSkipped === 1 ? " was" : "es were"} already in your timetable and ${duplicatesSkipped === 1 ? "was" : "were"} skipped.`}
+              {replaceSummary && ` ${replaceSummary}`}
             </p>
           </div>
 
@@ -640,6 +712,7 @@ export default function TimetableImportPage() {
               onClick={() => {
                 setStage("upload");
                 setDrafts([]);
+                setReplaceSummary("");
                 setImportId("");
                 setUploadError(null);
                 setConfirmError(null);
@@ -655,6 +728,15 @@ export default function TimetableImportPage() {
             </Button>
           </div>
         </div>
+      )}
+
+      {replacePreview && (
+        <ReplaceTimetableDialog
+          preview={replacePreview}
+          isSaving={confirming}
+          onCancel={() => setReplacePreview(null)}
+          onConfirm={handleReplaceConfirmed}
+        />
       )}
     </div>
   );
@@ -840,22 +922,20 @@ function EntryRow({ draft, courses, onChange, onRemove }: EntryRowProps) {
             {/* Start time */}
             <div className="space-y-1.5">
               <Label htmlFor={`start-${draft._id}`}>Start time</Label>
-              <Input
+              <TimePicker
                 id={`start-${draft._id}`}
-                type="time"
                 value={draft.start_time}
-                onChange={(e) => onChange({ start_time: e.target.value })}
+                onChange={(value) => onChange({ start_time: value })}
               />
             </div>
 
             {/* End time */}
             <div className="space-y-1.5">
               <Label htmlFor={`end-${draft._id}`}>End time</Label>
-              <Input
+              <TimePicker
                 id={`end-${draft._id}`}
-                type="time"
                 value={draft.end_time}
-                onChange={(e) => onChange({ end_time: e.target.value })}
+                onChange={(value) => onChange({ end_time: value })}
               />
             </div>
           </div>

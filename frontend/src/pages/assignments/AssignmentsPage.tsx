@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-
+import { toast } from "sonner";
 import AddAssignmentDialog from "@/components/assignments/AddAssignmentDialog";
-
+import ConfirmDialog from "@/components/common/ConfirmDialog";
+import { useHighlightItem } from "@/hooks/useHighlightItem";
 import {
   getAssignments,
   updateAssignment,
@@ -73,8 +74,11 @@ function isOverdue(assignment: Assignment): boolean {
 export default function AssignmentsPage() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  useHighlightItem(!isLoading);
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [assignmentToDelete, setAssignmentToDelete] =
+    useState<Assignment | null>(null);
 
   useEffect(() => {
     const fetchAssignments = async () => {
@@ -93,8 +97,9 @@ export default function AssignmentsPage() {
     fetchAssignments();
   }, []);
 
-  const handleAssignmentAdded = (assignment: Assignment) => {
+    const handleAssignmentAdded = (assignment: Assignment) => {
     setAssignments((prev) => [assignment, ...prev]);
+    toast.success("Assignment added", { description: assignment.title });
   };
 
   const handleToggleComplete = async (
@@ -115,19 +120,28 @@ export default function AssignmentsPage() {
           a.id === assignment.id ? updated : a
         )
       );
+      toast.success(
+        newStatus === "completed"
+          ? "Assignment completed"
+          : "Assignment reopened",
+        { description: assignment.title }
+      );
     } catch {
-      console.error("Failed to update assignment status");
+      toast.error("Couldn't update the assignment", {
+        description: "Please try again.",
+      });
     }
   };
 
-  const handleDelete = async (assignment: Assignment) => {
-    if (
-      !confirm(
-        `Delete "${assignment.title}"? This cannot be undone.`
-      )
-    ) {
-      return;
-    }
+    // Step 1: the trash button only opens the confirmation dialog.
+  const handleDelete = (assignment: Assignment) => {
+    setAssignmentToDelete(assignment);
+  };
+
+  // Step 2: runs when the student confirms in the dialog.
+  const confirmDelete = async () => {
+    if (!assignmentToDelete) return;
+    const assignment = assignmentToDelete;
 
     setDeletingId(assignment.id);
 
@@ -137,12 +151,16 @@ export default function AssignmentsPage() {
       setAssignments((prev) =>
         prev.filter((a) => a.id !== assignment.id)
       );
+      toast.success("Assignment deleted", {
+        description: assignment.title,
+      });
     } catch {
-      alert(
-        "Failed to delete assignment. Please try again."
-      );
+      toast.error("Couldn't delete the assignment", {
+        description: "Please try again.",
+      });
     } finally {
       setDeletingId(null);
+      setAssignmentToDelete(null);
     }
   };
 
@@ -174,7 +192,15 @@ export default function AssignmentsPage() {
             Track your assignments and submission deadlines.
           </p>
         </div>
-
+        <ConfirmDialog
+          open={assignmentToDelete !== null}
+          title="Delete this assignment?"
+          description={`"${assignmentToDelete?.title ?? ""}" will be permanently deleted. This cannot be undone.`}
+          confirmLabel="Delete assignment"
+          isLoading={deletingId !== null}
+          onConfirm={confirmDelete}
+          onCancel={() => setAssignmentToDelete(null)}
+        />
         <AddAssignmentDialog
           onAssignmentAdded={handleAssignmentAdded}
         />
@@ -333,7 +359,8 @@ function AssignmentCard({
   const isCompleted = assignment.status === "completed";
 
   return (
-    <div
+      <div
+      data-item-id={assignment.id}
       className={cn(
         "bg-card border border-border rounded-xl px-4 py-3 flex items-start gap-3 transition-opacity",
         isCompleted && "opacity-50",
