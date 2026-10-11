@@ -11,8 +11,10 @@ import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import {
   CalendarToggle,
+  groupOverlappingMarkers,
   PlannerMarkerBlock,
   PlannerMarkerChip,
+  PlannerMarkerGroup,
 } from "@/components/planner/PlannerMarker";
 import { eventToMarker, useCalendarMarkers } from "@/hooks/useCalendarMarkers";
 import type { CalendarMarker } from "@/hooks/useCalendarMarkers";
@@ -788,7 +790,13 @@ const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
     setCalendarView("week");
     setPendingHighlight(session.id);
   };
-
+  // Month view "+N more": open that day in the Day view
+  const showDay = (dateKey: string) => {
+    const date = new Date(`${dateKey}T00:00:00`);
+    setSelectedDate(date);
+    setCurrentWeek(getMonday(date));
+    setCalendarView("day");
+  };  
     const handleDeleteSession = async () => {
     if (!selectedStudySession) return;
     const deletedSession = selectedStudySession;
@@ -1925,6 +1933,19 @@ const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
                               onOpen={() => navigate(marker.to)}
                             />
                           ))}
+
+                          {getMarkersForDay(dateKey).length > 2 && (
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                showDay(dateKey);
+                              }}
+                              className="block w-full rounded px-1 py-0.5 text-left text-[8px] font-semibold text-primary hover:underline sm:text-[9px]"
+                            >
+                              +{getMarkersForDay(dateKey).length - 2} more
+                            </button>
+                          )}
                         </div>
                       </div>
                     );
@@ -2425,26 +2446,42 @@ const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
                             EXAMS, ASSIGNMENTS, TASKS AND EVENTS WITHOUT TIMES
                         ================================================== */}
 
-                        {getMarkersForDay(day.key).map((marker) => {
-                          const top =
-                            ((marker.startMin - FIRST_HOUR * 60) / 60) *
-                            ROW_HEIGHT;
-                          const height = Math.max(
-                            ((marker.endMin - marker.startMin) / 60) *
-                              ROW_HEIGHT,
-                            36
-                          );
+                                                {groupOverlappingMarkers(getMarkersForDay(day.key)).map(
+                          (group) => {
+                            const toTop = (minutes: number) =>
+                              ((minutes - FIRST_HOUR * 60) / 60) * ROW_HEIGHT;
+                            const toHeight = (start: number, end: number) =>
+                              Math.max(((end - start) / 60) * ROW_HEIGHT, 36);
 
-                          return (
-                            <PlannerMarkerBlock
-                              key={`marker-${marker.type}-${marker.id}`}
-                              marker={marker}
-                              top={top}
-                              height={height}
-                              onOpen={() => navigate(marker.to)}
-                            />
-                          );
-                        })}  
+                            // 3 or more at the same time: one block with a list
+                            if (group.length > 2) {
+                              const start = Math.min(...group.map((m) => m.startMin));
+                              const end = Math.max(...group.map((m) => m.endMin));
+                              return (
+                                <PlannerMarkerGroup
+                                  key={`marker-group-${group[0].type}-${group[0].id}`}
+                                  markers={group}
+                                  top={toTop(start)}
+                                  height={toHeight(start, end)}
+                                  onOpenItem={(marker) => navigate(marker.to)}
+                                />
+                              );
+                            }
+
+                            // 1 or 2: drawn side by side
+                            return group.map((marker, column) => (
+                              <PlannerMarkerBlock
+                                key={`marker-${marker.type}-${marker.id}`}
+                                marker={marker}
+                                top={toTop(marker.startMin)}
+                                height={toHeight(marker.startMin, marker.endMin)}
+                                column={column}
+                                columns={group.length}
+                                onOpen={() => navigate(marker.to)}
+                              />
+                            ));
+                          }
+                        )} 
                         {/* =================================================
                             PERSONAL EVENTS
                         ================================================== */}

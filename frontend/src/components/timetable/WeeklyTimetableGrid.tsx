@@ -86,7 +86,7 @@ export default function WeeklyTimetableGrid({
     day: "0",
     start_time: "09:00",
     end_time: "10:00",
-    class_type: "Lecture",
+    class_type: "lecture",
     venue: "",
     lecturer: "",
   });
@@ -114,7 +114,7 @@ export default function WeeklyTimetableGrid({
       day: String(entry.day_of_week),
       start_time: entry.start_time.slice(0, 5),
       end_time: entry.end_time.slice(0, 5),
-      class_type: entry.class_type || "Lecture",
+      class_type: (entry.class_type || "lecture").toLowerCase(),
       venue: entry.venue || "",
       lecturer: entry.lecturer || "",
     });
@@ -244,7 +244,11 @@ export default function WeeklyTimetableGrid({
               ?.detail
           : undefined;
 
-      setSubmitError(detail || "Failed to update entry. Please try again.");
+      setSubmitError(
+        typeof detail === "string"
+          ? detail
+          : "Couldn't save the change. Please check the details and try again."
+      );
     } finally {
       setIsSaving(false);
     }
@@ -625,11 +629,12 @@ export default function WeeklyTimetableGrid({
                         }
                         className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-primary"
                       >
-                        <option value="Lecture">Lecture</option>
-                        <option value="Tutorial">Tutorial</option>
-                        <option value="Lab">Lab</option>
-                        <option value="Practical">Practical</option>
-                        <option value="Other">Other</option>
+                        <option value="lecture">Lecture</option>
+                        <option value="tutorial">Tutorial</option>
+                        <option value="lab">Lab</option>
+                        <option value="practical">Practical</option>
+                        <option value="seminar">Seminar</option>
+                        <option value="other">Other</option>
                       </select>
                     </div>
 

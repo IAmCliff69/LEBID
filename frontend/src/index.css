@@ -350,3 +350,13 @@
 @custom-variant planner-fit (@media (min-width: 1024px) and (min-height: 520px));
 /* The same, for short windows (under about 760px tall) */
 @custom-variant planner-tight (@media (min-width: 1024px) and (min-height: 520px) and (max-height: 760px));
+
+/* Native dropdown lists (<select>) follow the Lebid theme, light and dark */
+select option {
+  background-color: var(--card);
+  color: var(--card-foreground);
+}
+
+.dark select {
+  color-scheme: dark;
+}

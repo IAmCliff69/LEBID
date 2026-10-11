@@ -75,6 +75,9 @@ class ConfirmImportRequest(BaseModel):
     # ticked them in the confirmation pop-up. Those ids are listed here.
     delete_course_ids: list[str] = []
 
+class ReviewedEntriesRequest(BaseModel):
+    """The student's corrected list of classes (the review step of onboarding)."""
+    entries: list[ExtractedEntry] = Field(..., min_length=1, max_length=100)
 
 class ConfirmImportResponse(BaseModel):
     """Result of saving confirmed timetable entries."""

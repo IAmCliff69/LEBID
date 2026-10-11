@@ -3,6 +3,7 @@ from datetime import date, time
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
 from sqlalchemy.orm import Session
+import re
 
 from app.dependencies import get_db, get_current_user
 from app.models.timetable_import import TimetableImport
@@ -21,6 +22,7 @@ from app.schemas.timetable_import import (
     PendingImportResponse,
     CourseUsage,
     ReplacePreviewResponse,
+    ReviewedEntriesRequest,
 )
 from app.services.gemini import extract_timetable_from_image, extract_timetable_from_pdf
 from app.services.study_plan_activation import _find_course
@@ -85,7 +87,20 @@ def _course_usage(db: Session, user_id: str, course: Course) -> CourseUsage:
 
 
 def _has_linked_work(usage: CourseUsage) -> bool:
-    return usage.tasks + usage.assignments + usage.exams + usage.study_sessions > 0    
+    return usage.tasks + usage.assignments + usage.exams + usage.study_sessions > 0   
+
+ALLOWED_CLASS_TYPES = {"lecture", "tutorial", "lab", "practical", "seminar", "other"}
+
+
+def _normalize_hhmm(value: str) -> str | None:
+    """"8:30" or "08:30:00" -> "08:30". Returns None if it is not a real time."""
+    match = re.fullmatch(r"(\d{1,2}):(\d{2})(?::\d{2})?", (value or "").strip())
+    if not match:
+        return None
+    hour, minute = int(match.group(1)), int(match.group(2))
+    if hour > 23 or minute > 59:
+        return None
+    return f"{hour:02d}:{minute:02d}" 
 
 @router.post("/upload", response_model=ExtractionResponse)
 async def upload_timetable(
@@ -254,6 +269,95 @@ async def upload_timetable(
                 "classes manually."
             ),
         )
+
+@router.put("/review/{import_id}", response_model=ExtractionResponse)
+def save_reviewed_entries(
+    import_id: str,
+    payload: ReviewedEntriesRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Saves the student's corrected list of classes over what the AI extracted.
+    Plan building, adjusting and activation all read their classes from this
+    record, so they automatically use the corrected list.
+    """
+    import_session = (
+        db.query(TimetableImport)
+        .filter(
+            TimetableImport.id == import_id,
+            TimetableImport.user_id == current_user.id,
+        )
+        .first()
+    )
+    if not import_session:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Import session not found.",
+        )
+    if import_session.status != "extracted":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This timetable can't be changed any more.",
+        )
+
+    cleaned: list[dict] = []
+    for index, entry in enumerate(payload.entries, start=1):
+        name = entry.course_name.strip()
+        if not name:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Class {index} needs a course name.",
+            )
+
+        start = _normalize_hhmm(entry.start_time)
+        end = _normalize_hhmm(entry.end_time)
+        if start is None or end is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"{name}: the start or end time is not a valid time.",
+            )
+        if start >= end:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"{name}: the class must end after it starts.",
+            )
+
+        class_type = (entry.class_type or "lecture").strip().lower()
+        if class_type not in ALLOWED_CLASS_TYPES:
+            class_type = "lecture"
+
+        cleaned.append(
+            {
+                "course_name": name,
+                "course_code": (entry.course_code or "").strip() or None,
+                "day_of_week": entry.day_of_week,
+                "start_time": start,
+                "end_time": end,
+                "venue": (entry.venue or "").strip() or None,
+                "lecturer": (entry.lecturer or "").strip() or None,
+                "class_type": class_type,
+            }
+        )
+
+    try:
+        stored = json.loads(import_session.extracted_data or "{}")
+    except json.JSONDecodeError:
+        stored = {}
+    if not isinstance(stored, dict):
+        stored = {}
+
+    stored["entries"] = cleaned
+    import_session.extracted_data = json.dumps(stored)
+    db.commit()
+
+    return ExtractionResponse(
+        import_id=import_session.id,
+        status=import_session.status,
+        extracted_entries=[ExtractedEntry(**item) for item in cleaned],
+        extraction_notes=stored.get("extraction_notes"),
+        message="Timetable updated.",
+    )
 
 @router.post("/confirm/{import_id}/preview", response_model=ReplacePreviewResponse)
 def preview_replace(

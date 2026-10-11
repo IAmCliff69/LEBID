@@ -69,6 +69,17 @@ export interface ReplacePreview {
   courses_with_work: CourseUsage[];
 }
 
+// Saves the student's corrected list of classes (onboarding review step)
+export const saveReviewedEntries = async (
+  importId: string,
+  entries: ExtractedEntry[]
+): Promise<ExtractionResponse> => {
+  const response = await apiClient.put(`/timetable-import/review/${importId}`, {
+    entries,
+  });
+  return response.data;
+};
+
 export const uploadTimetable = async (
   file: File,
   onUploadProgress?: (event: AxiosProgressEvent) => void

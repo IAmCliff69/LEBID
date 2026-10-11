@@ -32,6 +32,7 @@ import AcademicInformationPage from "@/pages/onboarding/AcademicInformationPage"
 import TimetableUploadPage from "@/pages/onboarding/TimetableUploadPage";
 import TimetableProcessingPage from "@/pages/onboarding/TimetableProcessingPage";
 import { OnboardingProvider } from "@/context/OnboardingContext";
+import TimetableReviewPage from "@/pages/onboarding/TimetableReviewPage";
 import StudyPreferencesPage from "@/pages/onboarding/StudyPreferencesPage";
 import PlanBuildingPage from "@/pages/onboarding/PlanBuildingPage";
 import PlanReviewPage from "@/pages/onboarding/PlanReviewPage";
@@ -156,6 +157,7 @@ function AppRoutes() {
         <Route path="/onboarding/academic" element={<AcademicInformationPage />} />
         <Route path="/onboarding/timetable" element={<TimetableUploadPage />} />
         <Route path="/onboarding/timetable-processing"element={<TimetableProcessingPage />} />
+        <Route path="/onboarding/timetable-review" element={<TimetableReviewPage />} />
         <Route path="/onboarding/study-preferences" element={<StudyPreferencesPage />} />
         <Route path="/onboarding/plan-building" element={<PlanBuildingPage />} />
         <Route path="/onboarding/plan-review" element={<PlanReviewPage />} />

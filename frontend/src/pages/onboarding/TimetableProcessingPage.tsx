@@ -129,8 +129,8 @@ export default function TimetableProcessingPage() {
     navigate("/onboarding/timetable", { replace: true });
   };
 
-  const handleContinue = () => {
-    navigate("/onboarding/study-preferences", { replace: true });
+    const handleContinue = () => {
+    navigate("/onboarding/timetable-review", { replace: true });
   };
 
   const entryCount = extraction?.extracted_entries.length ?? 0;

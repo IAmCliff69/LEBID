@@ -204,13 +204,13 @@ export default function Sidebar() {
               to="/dashboard"
               aria-label="Lebid Dashboard"
               title="Lebid"
-              className="flex size-11 items-center justify-center rounded-full bg-[#f4ede4] transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sidebar-ring"
+              className="flex h-[34px] w-14 items-center justify-center rounded-xl bg-[#f4ede4] transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sidebar-ring"
             >
               <img
-                src="/favicon.png"
+                src="/lebid-wordmark.png"
                 alt="Lebid"
                 draggable={false}
-                className="size-8 select-none object-contain"
+                className="w-12 select-none object-contain"
               />
             </NavLink>
           </div>
@@ -218,7 +218,7 @@ export default function Sidebar() {
           {/* Navigation */}
           <nav
             aria-label="Main navigation"
-            className="mt-3.5 flex flex-1 flex-col pb-14"
+            className="mt-5 flex flex-1 flex-col pb-14"
           >
             {navItems.map((item, index) => (
               <NavLink
