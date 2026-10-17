@@ -4,6 +4,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import check_database_connection
 from app.routers import auth, users, courses, timetable, timetable_import, tasks, assignments, exams, events, study_sessions, conflicts, ai, analytics, notifications, study_plan, lecture_occurrences
+from app.logging_config import setup_logging
+from app.middleware import RequestLoggingMiddleware
+from app.monitoring import init_monitoring
+setup_logging()
+init_monitoring()
 
 app = FastAPI(
     title="Lebid API",
@@ -11,6 +16,10 @@ app = FastAPI(
     version="0.1.0",
 )
 
+# Request ids and error logging. This must be added BEFORE the CORS block
+# below, so CORS stays the outermost layer and even our error answers get
+# the headers the browser needs.
+app.add_middleware(RequestLoggingMiddleware)
 # ---------------------------------------------------------------------------
 # CORS middleware
 # ---------------------------------------------------------------------------

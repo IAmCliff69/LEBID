@@ -175,7 +175,7 @@ def build_student_context(user: User, db: Session) -> dict:
         .filter(
             StudySession.user_id == user.id,
             StudySession.session_date >= today,
-            StudySession.session_date <= today + timedelta(days=7),
+            StudySession.session_date <= today + timedelta(days=14),
         )
         .order_by(StudySession.session_date.asc(), StudySession.start_time.asc())
         .all()
@@ -240,8 +240,29 @@ def build_student_context(user: User, db: Session) -> dict:
         for t in overdue_tasks
     ]
 
+        # --- Open tasks, so the AI can find them to change or complete ---
+    open_tasks = (
+        db.query(Task)
+        .filter(Task.user_id == user.id, Task.is_completed == False)
+        .order_by(Task.deadline.asc().nulls_last())
+        .limit(30)
+        .all()
+    )
+    open_tasks_data = [
+        {
+            "id": t.id,
+            "title": t.title,
+            "course_id": t.course_id,
+            "deadline": str(t.deadline.date()) if t.deadline else None,
+            "priority": t.priority,
+            "status": t.status,
+        }
+        for t in open_tasks
+    ]
+
     return {
         "today": str(today),
+        "today_weekday": DAY_NAMES[today.weekday()],
         "student": {
             "name": user.full_name,
             "university": user.university,
@@ -258,4 +279,5 @@ def build_student_context(user: User, db: Session) -> dict:
         "study_sessions_this_week": sessions_data,
         "missed_study_sessions": missed_data,
         "overdue_tasks": overdue_tasks_data,
+        "open_tasks": open_tasks_data,
     }

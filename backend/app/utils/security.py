@@ -31,26 +31,31 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         hashed_password.encode("utf-8"),
     )
 
-
+# A throwaway hash. Login checks a password against this when the email has no
+# account, so a wrong email takes as long to answer as a wrong password.
+DUMMY_PASSWORD_HASH = hash_password("lebid-dummy-password-for-timing")
 # ---------------------------------------------------------------------------
 # JWT tokens
 # ---------------------------------------------------------------------------
 
-def create_access_token(user_id: str) -> str:
+def create_access_token(user_id: str, token_version: int = 0) -> str:
     """
     Create a signed JWT access token containing the user's ID.
     The token expires after the configured number of minutes.
+
+    token_version is the account's current version number. If the student
+    changes their password later, the number goes up and this token stops working.
     """
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=settings.jwt_access_token_expire_minutes
     )
     payload = {
         "sub": user_id,       # subject — who this token belongs to
+        "ver": token_version, # which "generation" of logins this belongs to
         "exp": expire,        # expiry time
         "iat": datetime.now(timezone.utc),  # issued at
     }
     return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
-
 
 def decode_access_token(token: str) -> str | None:
     """

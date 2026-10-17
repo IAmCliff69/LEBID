@@ -12,10 +12,12 @@ from app.models.study_preferences import StudyPreferences
 from app.models.user_avatar import UserAvatar
 from app.models.notification_preferences import NotificationPreferences
 from app.models.lecture_occurrence import LectureOccurrence
+from app.models.auth_event import AuthEvent
+from app.models.auth_token import AuthToken
 
 __all__ = [
     "User", "Course", "TimetableEntry", "TimetableImport",
     "Task", "Assignment", "Exam", "Event", "StudySession", "Notification",
     "StudyPreferences", "UserAvatar", "NotificationPreferences",
-    "LectureOccurrence",
+    "LectureOccurrence","AuthEvent","AuthToken",
 ]

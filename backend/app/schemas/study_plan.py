@@ -68,10 +68,10 @@ class ActivationSession(PlannedStudySession):
 
 class ActivatePlanRequest(BaseModel):
     """The final, reviewed plan the student wants to start using."""
-    import_id: str
+    import_id: str | None = None
     sessions: list[ActivationSession] = Field(..., min_length=1, max_length=100)
     # How many weeks each weekly session is created for, starting today
-    weeks: int = Field(default=34, ge=1, le=20)
+    weeks: int = Field(default=12, ge=1, le=20)
 
 
 class ActivatedPlan(BaseModel):
@@ -81,4 +81,5 @@ class ActivatedPlan(BaseModel):
     timetable_entries_saved: int
     study_sessions_created: int
     weeks: int
+    sessions_replaced: int = 0   # upcoming AI sessions removed (standalone plans only)
     message: str        

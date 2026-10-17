@@ -5,10 +5,12 @@ import { CheckCircle2, Circle } from "lucide-react";
 import { getCourses } from "@/api/courses";
 import { getStudySessions } from "@/api/studySessions";
 import { getTimetable } from "@/api/timetable";
+import { useStartPlanBuilder } from "@/hooks/useStartPlanBuilder";
 
 // Shown only to brand-new accounts. It disappears by itself once the student
 // has a timetable, courses and study sessions.
 export default function GettingStartedCard() {
+  const startPlanBuilder = useStartPlanBuilder();
   const courses = useQuery({ queryKey: ["courses"], queryFn: getCourses });
   const timetable = useQuery({ queryKey: ["timetable"], queryFn: getTimetable });
   const sessions = useQuery({
@@ -21,17 +23,25 @@ export default function GettingStartedCard() {
   if (courses.isError || timetable.isError || sessions.isError) return null;
 
   // The timetable comes first: importing it also creates the courses.
-  const steps = [
+    const steps = [
     {
       label: "Add your timetable",
       done: (timetable.data?.length ?? 0) > 0,
       to: "/timetable-import",
+      buttonText: "Add your timetable",
     },
-    { label: "Add your courses", done: (courses.data?.length ?? 0) > 0, to: "/courses" },
+    {
+      label: "Add your courses",
+      done: (courses.data?.length ?? 0) > 0,
+      to: "/courses",
+      buttonText: "Add your courses",
+    },
     {
       label: "Plan your study sessions",
       done: (sessions.data?.length ?? 0) > 0,
-      to: "/planner",
+      // No link: this one starts the AI plan builder
+      to: null as string | null,
+      buttonText: "Build my study plan with AI",
     },
   ];
 
@@ -71,12 +81,22 @@ export default function GettingStartedCard() {
           </ul>
         </div>
 
-        <Link
-          to={nextStep.to}
-          className="shrink-0 rounded-xl bg-primary px-4 py-2.5 text-center text-xs font-medium text-primary-foreground shadow-sm transition hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring dashboard-fit:py-2"
-        >
-          {nextStep.label}
-        </Link>
+                {nextStep.to ? (
+          <Link
+            to={nextStep.to}
+            className="shrink-0 rounded-xl bg-primary px-4 py-2.5 text-center text-xs font-medium text-primary-foreground shadow-sm transition hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring dashboard-fit:py-2"
+          >
+            {nextStep.buttonText}
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={() => void startPlanBuilder()}
+            className="shrink-0 rounded-xl bg-primary px-4 py-2.5 text-center text-xs font-medium text-primary-foreground shadow-sm transition hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring dashboard-fit:py-2"
+          >
+            {nextStep.buttonText}
+          </button>
+        )}
       </div>
     </section>
   );

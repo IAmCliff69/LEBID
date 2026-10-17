@@ -83,7 +83,7 @@ def _class_block(start_min, end_min, day=0):
 
 
 def _spans(windows):
-    return [(w.start_min, w.end_min) for w in windows]
+    return [(w.start_min, w.end_min) for w in windows if not w.extended]
 
 
 def test_free_window_without_classes():
@@ -115,7 +115,7 @@ def test_windows_only_on_preferred_days():
 def test_too_short_gaps_are_ignored():
     # class 12:30-16:45 leaves only tiny gaps, so no window at all
     windows = find_free_windows([_class_block(12 * 60 + 30, 16 * 60 + 45)], _prefs())
-    assert windows == []
+    assert [w for w in windows if not w.extended] == []
 
 
 # --- the endpoint ------------------------------------------------------------

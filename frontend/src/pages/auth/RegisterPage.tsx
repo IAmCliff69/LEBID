@@ -8,12 +8,16 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PASSWORD_TOO_LONG_MESSAGE, passwordFitsLimit } from "@/lib/passwordRules";
 
 const registerSchema = z
   .object({
     name: z.string().min(2, "Name must be at least 2 characters"),
     email: z.string().email("Please enter a valid email address"),
-    password: z.string().min(8, "Password must be at least 8 characters"),
+      password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .refine(passwordFitsLimit, PASSWORD_TOO_LONG_MESSAGE),
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {

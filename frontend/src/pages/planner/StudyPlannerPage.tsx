@@ -36,6 +36,7 @@ import {
   Check,
   Lock,
   RotateCcw,
+  Sparkles,
 } from "lucide-react";
 
 import { getCourses } from "@/api/courses";
@@ -44,6 +45,7 @@ import { toast } from "sonner";
 import { getLectureOccurrences } from "@/api/lectureOccurrences";
 import type { LectureOccurrence } from "@/api/lectureOccurrences";
 import { useNow } from "@/hooks/useNow";
+import { useStartPlanBuilder } from "@/hooks/useStartPlanBuilder";
 
 
 import {
@@ -247,6 +249,7 @@ export default function StudyPlannerPage() {
   );
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [calendarView, setCalendarView] = useState<CalendarView>("week");
+  const startPlanBuilder = useStartPlanBuilder();
 
   const [courses, setCourses] = useState<Course[]>([]);
   const [studySessions, setStudySessions] = useState<
@@ -1060,24 +1063,35 @@ const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
           </div>
         </div>
 
-        <AddStudySessionDialog
-          courses={courses}
-          defaultDate={dateToKey(selectedDate)}
-          onSessionAdded={(session, count) => {
-            setRefreshKey((k) => k + 1);
-            toast.success(
-              count > 1
-                ? `${count} study sessions added`
-                : "Study session added",
-              {
-                description:
-                  count > 1
-                    ? `${getCourseNameForToast(session.course_id)} · every week for ${count} weeks`
-                    : getCourseNameForToast(session.course_id),
-              }
-            );
-          }}
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void startPlanBuilder()}
+            className="flex h-10 items-center gap-2 rounded-xl border border-border bg-card px-4 text-sm font-medium text-foreground shadow-sm transition hover:bg-muted"
+          >
+            <Sparkles className="size-4 text-primary" aria-hidden="true" />
+            Build my study plan with AI
+          </button>
+
+          <AddStudySessionDialog
+            courses={courses}
+            defaultDate={dateToKey(selectedDate)}
+            onSessionAdded={(session, count) => {
+              setRefreshKey((k) => k + 1);
+              toast.success(
+                count > 1
+                  ? `${count} study sessions added`
+                  : "Study session added",
+                {
+                  description:
+                    count > 1
+                      ? `${getCourseNameForToast(session.course_id)} · every week for ${count} weeks`
+                      : getCourseNameForToast(session.course_id),
+                }
+              );
+            }}
+          />
+        </div>
       </div>
 
       {/* ERROR */}

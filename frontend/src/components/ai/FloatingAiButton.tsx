@@ -9,10 +9,14 @@ export default function FloatingAiButton() {
   const location = useLocation();
   const isAiOpen = location.pathname === "/ai";
 
-  const [pos, setPos] = useState(() => ({
-    right: 24,
-    bottom: Math.max(8, window.innerHeight / 2 - BUTTON_SIZE / 2),
-  }));
+  const [pos, setPos] = useState(() => {
+    // On a phone the button starts at the lower right, just above the bottom bar
+    if (window.innerWidth < 768) return { right: 20, bottom: 100 };
+    return {
+      right: 24,
+      bottom: Math.max(8, window.innerHeight / 2 - BUTTON_SIZE / 2),
+    };
+  });
 
   const dragging = useRef(false);
   const dragStart = useRef({ pointerX: 0, pointerY: 0, right: 0, bottom: 0 });

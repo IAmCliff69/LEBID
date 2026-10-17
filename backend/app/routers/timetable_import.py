@@ -480,7 +480,7 @@ def confirm_import(
             detail="No entries provided to save.",
         )
 
-        classes_removed = 0
+    classes_removed = 0
     sessions_removed = 0
     courses_removed = 0
     courses_kept = 0

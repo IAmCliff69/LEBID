@@ -217,11 +217,13 @@ export default function AuthPage({
                           >
                             Password
                           </label>
-                          <button
+                           <button
                             type="button"
                             className="text-xs font-medium text-white/90 underline-offset-2 hover:underline"
                             onClick={() =>
-                              alert("Forgot password flow will be added later.")
+                              navigate("/forgot-password", {
+                                state: { email: loginForm.getValues("email") },
+                              })
                             }
                           >
                             Forgot password?

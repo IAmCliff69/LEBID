@@ -10,6 +10,7 @@ import ThemeToggle from "@/components/layout/ThemeToggle";
 import { cn } from "@/lib/utils";
 import StudySessionEditor from "@/pages/onboarding/StudySessionEditor";
 import { adjustStudyPlan, type PlannedStudySession } from "@/api/studyPlan";
+import { useAuth } from "@/context/AuthContext";
 
 const DAY_NAMES = [
   "Monday",
@@ -70,7 +71,11 @@ const friendlyFont = { fontFamily: '"Original Surfer", cursive' };
 export default function PlanReviewPage() {
   const navigate = useNavigate();
   const prefersReducedMotion = useReducedMotion();
-  const { extraction, studyPlan, setStudyPlan } = useOnboarding();
+  const { extraction, planFromSaved, studyPlan, setStudyPlan } = useOnboarding();
+  const { user } = useAuth();
+  const fallbackPath = user?.onboarding_completed
+    ? "/planner"
+    : "/onboarding/timetable";
 
   // Which study session is being edited, and the one removed last (for Undo).
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -88,13 +93,14 @@ export default function PlanReviewPage() {
   } | null>(null);
 
   // Without a plan there is nothing to review (for example after a refresh).
-  useEffect(() => {
+    useEffect(() => {
     if (!studyPlan) {
-      navigate(extraction ? "/onboarding/plan-building" : "/onboarding/timetable", {
-        replace: true,
-      });
+      navigate(
+        extraction || planFromSaved ? "/onboarding/plan-building" : fallbackPath,
+        { replace: true }
+      );
     }
-  }, [studyPlan, extraction, navigate]);
+  }, [studyPlan, extraction, planFromSaved, fallbackPath, navigate]);
 
   // Mix the classes and the study sessions together, grouped by day.
   const dayGroups = useMemo<DayGroup[]>(() => {

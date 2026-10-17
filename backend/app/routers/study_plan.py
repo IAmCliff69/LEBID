@@ -188,34 +188,41 @@ def activate(
 
     Either everything is saved, or nothing is.
     """
-    # Scoped to the logged-in student
-    import_session = (
-        db.query(TimetableImport)
-        .filter(
-            TimetableImport.id == payload.import_id,
-            TimetableImport.user_id == current_user.id,
-        )
-        .first()
-    )
-    if import_session is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Timetable import not found.",
-        )
+    import_session = None
 
-    if import_session.status == "confirmed":
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="This plan has already been activated.",
+    if payload.import_id:
+        # Scoped to the logged-in student
+        import_session = (
+            db.query(TimetableImport)
+            .filter(
+                TimetableImport.id == payload.import_id,
+                TimetableImport.user_id == current_user.id,
+            )
+            .first()
         )
+        if import_session is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Timetable import not found.",
+            )
 
-    if import_session.status != "extracted" or not import_session.extracted_data:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="This timetable has not been processed yet.",
-        )
+        if import_session.status == "confirmed":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This plan has already been activated.",
+            )
 
-    classes, _skipped = classes_from_extraction(import_session.extracted_data)
+        if import_session.status != "extracted" or not import_session.extracted_data:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="This timetable has not been processed yet.",
+            )
+
+        classes, _skipped = classes_from_extraction(import_session.extracted_data)
+    else:
+        # No upload: plan around the timetable already saved in Lebid
+        classes, _skipped = classes_from_saved_timetable(db, current_user.id)
+
     if not classes:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

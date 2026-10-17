@@ -29,6 +29,7 @@ export interface User {
   onboarding_completed?: boolean;
   has_avatar?: boolean;
   avatar_updated_at?: string | null;
+  email_verified?: boolean;
 }
 
 // =========================================================
@@ -67,4 +68,34 @@ export const getMe = async (): Promise<User> => {
   const response = await apiClient.get("/auth/me");
 
   return response.data;
+};
+
+// Confirm an email address using the secret from the emailed link
+export const verifyEmail = async (token: string): Promise<void> => {
+  await apiClient.post("/auth/verify-email", { token });
+};
+
+// Ask for a new verification email (the student must be logged in)
+export const resendVerification = async (): Promise<string> => {
+  const response = await apiClient.post("/auth/resend-verification");
+  return response.data.message;
+};
+
+// Ask for a password reset email. The answer is always the same, whether or
+// not the email has an account.
+export const forgotPassword = async (email: string): Promise<string> => {
+  const response = await apiClient.post("/auth/forgot-password", { email });
+  return response.data.message;
+};
+
+// Choose a new password using the secret from the reset link
+export const resetPassword = async (
+  token: string,
+  newPassword: string
+): Promise<string> => {
+  const response = await apiClient.post("/auth/reset-password", {
+    token,
+    new_password: newPassword,
+  });
+  return response.data.message;
 };

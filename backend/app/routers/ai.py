@@ -7,6 +7,7 @@ from app.schemas.ai import ChatRequest, ChatResponse, Recommendation
 from app.services.context_builder import build_student_context
 from app.services.ai_planner import get_ai_response
 from app.services.gemini import explain_gemini_error
+from app.services.ai_actions import validate_actions
 
 router = APIRouter()
 
@@ -82,6 +83,11 @@ def chat_with_ai(
         except Exception:
             continue
 
+        # Check every suggested change before the student ever sees it
+    actions, action_warnings = validate_actions(
+        result.get("actions", []), current_user.id, db
+    )
+
     return ChatResponse(
         message=result.get(
             "message",
@@ -89,4 +95,6 @@ def chat_with_ai(
         ),
         recommendations=recommendations,
         insights=result.get("insights", []),
+        actions=actions,
+        action_warnings=action_warnings,
     )

@@ -26,6 +26,9 @@ interface OnboardingContextType {
   setStudyPreferences: (preferences: StudyPreferences | null) => void;
   studyPlan: GeneratedStudyPlan | null;
   setStudyPlan: (plan: GeneratedStudyPlan | null) => void;
+    // True when the plan is built from the saved timetable (no upload)
+  planFromSaved: boolean;
+  setPlanFromSaved: (value: boolean) => void;
 }
 
 const OnboardingContext = createContext<OnboardingContextType | undefined>(
@@ -40,6 +43,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   const [studyPreferences, setStudyPreferences] =
     useState<StudyPreferences | null>(null);
   const [studyPlan, setStudyPlan] = useState<GeneratedStudyPlan | null>(null);
+  const [planFromSaved, setPlanFromSaved] = useState(false);
 
   return (
     <OnboardingContext.Provider
@@ -52,6 +56,8 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         setStudyPreferences,
         studyPlan,
         setStudyPlan,
+        planFromSaved,
+        setPlanFromSaved,
       }}
     >
       {children}

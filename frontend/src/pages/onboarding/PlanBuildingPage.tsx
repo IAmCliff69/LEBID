@@ -3,11 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "motion/react";
 import { ArrowRight, Check, Loader2, RotateCcw } from "lucide-react";
 
+
 import { generateStudyPlan } from "@/api/studyPlan";
 import { discardImport } from "@/api/timetableImport";
 import { useOnboarding } from "@/context/OnboardingContext";
 import LebidLogo from "@/components/brand/LebidLogo";
 import ThemeToggle from "@/components/layout/ThemeToggle";
+import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
 
 // generating -> the AI is building the plan (the real request is running)
@@ -94,11 +96,18 @@ export default function PlanBuildingPage() {
   const prefersReducedMotion = useReducedMotion();
   const {
     extraction,
+    planFromSaved,
+    setPlanFromSaved,
     studyPlan,
     setStudyPlan,
     setTimetableFile,
     setExtraction,
   } = useOnboarding();
+  const { user } = useAuth();
+  // Where a student goes if there is nothing to build a plan from
+  const fallbackPath = user?.onboarding_completed
+    ? "/planner"
+    : "/onboarding/timetable";
 
   // If a plan already exists (for example the student pressed Back),
   // show the finished state instead of asking the AI again.
@@ -109,7 +118,7 @@ export default function PlanBuildingPage() {
 
   // Asks the backend to build the plan and follows what really happens.
   const performGeneration = useCallback(
-    async (importId: string) => {
+    async (importId: string | null) => {
       try {
         const plan = await generateStudyPlan(importId);
         setStudyPlan(plan);
@@ -128,35 +137,51 @@ export default function PlanBuildingPage() {
   );
 
   // Start once when the page opens.
-  useEffect(() => {
+    useEffect(() => {
     if (studyPlan) return;
 
-    if (!extraction) {
-      // No processed timetable (for example after a page refresh).
-      navigate("/onboarding/timetable", { replace: true });
+    if (!extraction && !planFromSaved) {
+      // Nothing to plan from (for example after a page refresh).
+      navigate(fallbackPath, { replace: true });
       return;
     }
 
-    // This guard makes sure the plan is requested only ONCE, even in
-    // development mode where React runs effects twice.
+    // Request the plan only ONCE, even when React runs effects twice in dev.
     if (startedRef.current) return;
     startedRef.current = true;
 
-    void performGeneration(extraction.import_id);
-  }, [studyPlan, extraction, navigate, performGeneration]);
-
-  const handleRetry = () => {
-    if (!extraction) return;
+    void performGeneration(extraction?.import_id ?? null);
+  }, [studyPlan, extraction, planFromSaved, fallbackPath, navigate, performGeneration]);
+    const handleRetry = () => {
+    if (!extraction && !planFromSaved) return;
     setErrorMessage(null);
     setPhase("generating");
-    void performGeneration(extraction.import_id);
+    void performGeneration(extraction?.import_id ?? null);
   };
 
   const handleChangePreferences = () => {
     navigate("/onboarding/study-preferences", { replace: true });
+    if (planFromSaved) {
+      setPlanFromSaved(false);
+      setStudyPlan(null);
+      navigate("/planner", { replace: true });
+      return;
+    }
   };
 
+
+
   const handleUploadDifferent = () => {
+    // Standalone plan: there is no upload to replace, so go back to the planner
+    if (planFromSaved) {
+      setPlanFromSaved(false);
+      setStudyPlan(null);
+      navigate("/onboarding/../planner".replace("/onboarding/..", ""), {
+        replace: true,
+      });
+      return;
+    }
+
     // Throw the abandoned upload away on the server too (if there was one).
     if (extraction) {
       discardImport(extraction.import_id).catch(() => {
@@ -310,7 +335,7 @@ export default function PlanBuildingPage() {
                 onClick={handleUploadDifferent}
                 className="text-sm font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
               >
-                Upload a different timetable
+                {planFromSaved ? "Back to my planner" : "Upload a different timetable"}
               </button>
             </div>
           )}

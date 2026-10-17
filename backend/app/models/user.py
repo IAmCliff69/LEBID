@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import String, Boolean, DateTime
+from sqlalchemy import String, Boolean, DateTime, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -42,6 +42,20 @@ class User(Base):
         return bool(self.gemini_api_key)
 
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+        # When the student confirmed their email address (empty until they do)
+    email_verified_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    @property
+    def email_verified(self) -> bool:
+        """True once the student has clicked the link in their verification email."""
+        return self.email_verified_at is not None
+        # Goes up by 1 whenever the password changes. Login tokens carry the
+    # number they were issued under, so older logins stop working.
+    token_version: Mapped[int] = mapped_column(
+        Integer, default=0, server_default="0", nullable=False
+    )
 
         # False until the student finishes onboarding (plan activation or Finish Setup)
     onboarding_completed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

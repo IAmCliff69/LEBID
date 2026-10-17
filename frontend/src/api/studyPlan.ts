@@ -44,7 +44,7 @@ export interface GeneratedStudyPlan {
 // Asks the backend to propose a study plan around the classes in the
 // timetable import. Nothing is saved on the server by this call.
 export const generateStudyPlan = async (
-  importId: string
+  importId: string | null
 ): Promise<GeneratedStudyPlan> => {
   const response = await apiClient.post("/study-plan/generate", {
     import_id: importId,
@@ -90,7 +90,7 @@ export interface ActivatedPlan {
 
 // Starts using the reviewed plan. Either everything is saved, or nothing is.
 export const activateStudyPlan = async (
-  importId: string,
+  importId: string | null,
   sessions: ActivationSession[]
 ): Promise<ActivatedPlan> => {
   const response = await apiClient.post("/study-plan/activate", {

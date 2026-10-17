@@ -15,13 +15,16 @@ import {
 } from "lucide-react";
 import { marked } from "marked";
 import { sendAiMessage } from "@/api/ai";
-import type { ConversationMessage, AiRecommendation } from "@/api/ai";
+import AiActionList from "@/components/ai/AiActionList";
+import type { ActionState } from "@/lib/aiActions";
+import type { ConversationMessage, AiRecommendation, AiAction } from "@/api/ai";
 import { createStudySession } from "@/api/studySessions";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import type { SpeechError } from "@/hooks/useSpeechToText";
+import { useStartPlanBuilder } from "@/hooks/useStartPlanBuilder";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -30,6 +33,10 @@ interface ChatEntry {
   content: string;
   recommendations?: AiRecommendation[];
   insights?: string[];
+  actions?: AiAction[];
+  actionWarnings?: string[];
+  // What the student did with each action card (saved with the conversation)
+  actionStates?: Record<string, ActionState>;
   error?: boolean;
 }
 
@@ -272,6 +279,7 @@ export default function AiAssistantPage() {
   // All saved conversations, newest first
     const { user } = useAuth();
   const storageKey = getStorageKey(user?.id ?? "unknown");
+  const startPlanBuilder = useStartPlanBuilder();
 
   // All saved conversations for THIS user only, newest first
   const [conversations, setConversations] = useState<SavedConversation[]>(
@@ -330,11 +338,37 @@ export default function AiAssistantPage() {
   };
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+    // Always holds the latest chat, so quick back-to-back card updates don't
+  // overwrite each other.
+  const chatRef = useRef<ChatEntry[]>([]);
+  useEffect(() => {
+    chatRef.current = chat;
+  }, [chat]);
 
-  // Scroll to bottom on new messages
+  // Remember what the student did with an action card (Apply, Dismiss, Undo)
+  const setActionState = (
+    entryIndex: number,
+    key: string,
+    state: ActionState
+  ) => {
+    const nextChat = chatRef.current.map((entry, i) =>
+      i === entryIndex
+        ? { ...entry, actionStates: { ...entry.actionStates, [key]: state } }
+        : entry
+    );
+    chatRef.current = nextChat;
+    setChat(nextChat);
+    if (activeId) {
+      setConversations((prev) =>
+        updateConversation(prev, activeId, nextChat, getCurrentTime())
+      );
+    }
+  };
+
+    // Scroll to bottom when a new message arrives (not when a card changes state)
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chat, isLoading]);
+  }, [chat.length, isLoading]);
 
   // Persist conversations to localStorage when their state changes.
     useEffect(() => {
@@ -437,11 +471,14 @@ export default function AiAssistantPage() {
         buildHistory(baseMessages),
         controller.signal
       );
+
       const assistantEntry: ChatEntry = {
         role: "assistant",
         content: result.message,
         recommendations: result.recommendations,
         insights: result.insights,
+        actions: result.actions ?? [],
+        actionWarnings: result.action_warnings ?? [],
       };
       const updatedMessages = [...nextMessages, assistantEntry];
       const updatedAt = getCurrentTime();
@@ -705,6 +742,14 @@ export default function AiAssistantPage() {
                     </button>
                   ))}
                 </div>
+                <button
+                  type="button"
+                  onClick={() => void startPlanBuilder()}
+                  className="mt-4 flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-medium text-primary-foreground shadow-sm transition hover:bg-primary-hover"
+                >
+                  <Sparkles className="h-4 w-4" aria-hidden="true" />
+                  Build my study plan with AI
+                </button>
               </div>
             )}
 
@@ -827,6 +872,29 @@ export default function AiAssistantPage() {
                             <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
                             {insight}
                           </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {entry.actions && entry.actions.length > 0 && (
+                      <AiActionList
+                        actions={entry.actions}
+                        states={entry.actionStates}
+                        onStateChange={(key, state) =>
+                          setActionState(i, key, state)
+                        }
+                      />
+                    )}
+
+                    {entry.actionWarnings && entry.actionWarnings.length > 0 && (
+                      <div className="w-full space-y-1">
+                        {entry.actionWarnings.map((warning, j) => (
+                          <p
+                            key={j}
+                            className="rounded-lg bg-muted px-3 py-1.5 text-xs text-muted-foreground"
+                          >
+                            {warning}
+                          </p>
                         ))}
                       </div>
                     )}

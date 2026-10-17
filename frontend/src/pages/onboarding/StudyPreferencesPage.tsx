@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "motion/react";
@@ -12,7 +12,7 @@ import type {
 import LebidLogo from "@/components/brand/LebidLogo";
 import ThemeToggle from "@/components/layout/ThemeToggle";
 import { cn } from "@/lib/utils";
-import { saveStudyPreferences } from "@/api/users";
+import { getStudyPreferences, saveStudyPreferences } from "@/api/users";
 
 const STUDY_TIMES: { value: StudyTime; label: string }[] = [
   { value: "morning", label: "Morning" },
@@ -110,11 +110,17 @@ function getErrorMessage(error: unknown, fallback: string): string {
 export default function StudyPreferencesPage() {
   const navigate = useNavigate();
   const prefersReducedMotion = useReducedMotion();
-  const { extraction, studyPreferences, setStudyPreferences, setStudyPlan } =
-    useOnboarding();
+  const {
+    extraction,
+    planFromSaved,
+    setPlanFromSaved,
+    studyPreferences,
+    setStudyPreferences,
+    setStudyPlan,
+  } = useOnboarding();
 
   // The uploaded-timetable path has an extraction; the skipped path does not.
-  const isUploadPath = extraction !== null;
+  const isUploadPath = extraction !== null || planFromSaved;
 
   // Start from earlier answers if the student comes back to this page.
   const [studyTimes, setStudyTimes] = useState<StudyTime[]>(
@@ -132,6 +138,31 @@ export default function StudyPreferencesPage() {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [isSaving, setIsSaving] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+    // Standalone mode: start from the preferences saved earlier
+  useEffect(() => {
+    if (studyPreferences || !planFromSaved) return;
+    let cancelled = false;
+    getStudyPreferences()
+      .then((saved) => {
+        if (cancelled || !saved) return;
+        setStudyTimes(saved.study_times);
+        setStudyDays(saved.study_days);
+        setSessionLength(saved.session_length_minutes);
+        setBreakPreference(saved.break_preference);
+      })
+      .catch(() => {
+        // The student can simply fill the form in
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleCancel = () => {
+    setPlanFromSaved(false);
+    navigate("/planner", { replace: true });
+  };
 
   const toggleTime = (time: StudyTime) => {
     setErrors((current) => ({ ...current, studyTime: undefined }));
@@ -363,7 +394,7 @@ export default function StudyPreferencesPage() {
               )}
             </fieldset>
 
-                        {serverError && (
+             {serverError && (
               <p
                 role="alert"
                 className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive"
@@ -389,6 +420,15 @@ export default function StudyPreferencesPage() {
                 </>
               )}
             </button>
+              {planFromSaved && (
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="text-center text-sm font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+              >
+                Cancel
+              </button>
+            )}
           </form>
         </div>
       </motion.div>

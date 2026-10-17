@@ -84,10 +84,30 @@ def _find_course(db: Session, user_id: str, name: str, code: str | None) -> Cour
     return query.filter(func.lower(Course.name) == name.strip().lower()).first()
 
 
+def _remove_upcoming_ai_sessions(db: Session, user_id: str, today: date) -> int:
+    """
+    Removes the student's upcoming AI-planned sessions that are still 'planned',
+    so activating a new plan does not double up the old one. Completed,
+    skipped and manually added sessions are never touched.
+    """
+    old_sessions = (
+        db.query(StudySession)
+        .filter(
+            StudySession.user_id == user_id,
+            StudySession.is_ai_generated.is_(True),
+            StudySession.status == "planned",
+            StudySession.session_date >= today,
+        )
+        .all()
+    )
+    for old in old_sessions:
+        db.delete(old)
+    return len(old_sessions)
+
 def activate_plan(
     db: Session,
     user: User,
-    import_session: TimetableImport,
+    import_session: TimetableImport | None,
     classes: list[ClassBlock],
     sessions: list[ActivationSession],
     weeks: int,
@@ -179,6 +199,11 @@ def activate_plan(
     # 3. Study sessions: each weekly session repeats for the chosen number of weeks
     sessions_created = 0
 
+        # A plan built from the saved timetable replaces the old upcoming AI sessions
+    sessions_replaced = 0
+    if import_session is None:
+        sessions_replaced = _remove_upcoming_ai_sessions(db, user.id, today)
+
     for s in sessions:
         course_id = course_ids[_identity(s.course_name, s.course_code)]
         start = _to_time(_parse_hhmm(s.start_time) or 0)
@@ -201,8 +226,9 @@ def activate_plan(
             )
             sessions_created += 1
 
-    # 4. This import is now used up
-    import_session.status = "confirmed"
+        # 4. An import is now used up (a plan built from the saved timetable has none)
+    if import_session is not None:
+        import_session.status = "confirmed"
 
     return ActivatedPlan(
         courses_created=courses_created,
@@ -210,6 +236,7 @@ def activate_plan(
         timetable_entries_saved=entries_saved,
         study_sessions_created=sessions_created,
         weeks=weeks,
+        sessions_replaced=sessions_replaced,
         message=(
             f"Your plan is active. {sessions_created} study sessions were added "
             f"to your planner over the next {weeks} weeks."

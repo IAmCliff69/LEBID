@@ -69,12 +69,20 @@ def get_current_user(
     if user is None or not user.is_active:
         raise credentials_exception
 
+    # A password change ends every older login. Tokens issued before versioning
+    # have no "ver" claim, which is treated as version 0.
+    if payload.get("ver", 0) != user.token_version:
+        raise credentials_exception
+
     # Renew the login if less than half of its lifetime is left.
     expires_at = payload.get("exp")
     if expires_at is not None:
         seconds_left = expires_at - datetime.now(timezone.utc).timestamp()
         full_lifetime = settings.jwt_access_token_expire_minutes * 60
         if seconds_left < full_lifetime / 2:
-            set_auth_cookie(response, create_access_token(user_id=user.id))
+            set_auth_cookie(
+                response,
+                create_access_token(user_id=user.id, token_version=user.token_version),
+            )
 
     return user

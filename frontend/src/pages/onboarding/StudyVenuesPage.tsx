@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, useReducedMotion } from "motion/react";
 import { ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 import { activateStudyPlan } from "@/api/studyPlan";
 import { useOnboarding } from "@/context/OnboardingContext";
@@ -57,8 +58,17 @@ export default function StudyVenuesPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const prefersReducedMotion = useReducedMotion();
-  const { extraction, studyPlan, setTimetableFile } = useOnboarding();
+  const {
+    extraction,
+    planFromSaved,
+    setPlanFromSaved,
+    studyPlan,
+    setTimetableFile,
+  } = useOnboarding();
   const { user, setUser } = useAuth();
+  const fallbackPath = user?.onboarding_completed
+    ? "/planner"
+    : "/onboarding/timetable";
 
   // One venue per study session (same order as the plan's sessions).
   const [venues, setVenues] = useState<string[]>(
@@ -73,26 +83,35 @@ export default function StudyVenuesPage() {
   useEffect(() => {
     if (!studyPlan) {
       navigate(
-        extraction ? "/onboarding/plan-building" : "/onboarding/timetable",
+        extraction || planFromSaved ? "/onboarding/plan-building" : fallbackPath,
         { replace: true }
       );
     } else if (studyPlan.sessions.length === 0) {
       navigate("/onboarding/plan-review", { replace: true });
     }
-  }, [studyPlan, extraction, navigate]);
+  }, [studyPlan, extraction, navigate, planFromSaved, fallbackPath]);
 
   // After the success message shows for a moment, show the "You're all set"
   // page (its button then opens the Dashboard).
-  useEffect(() => {
+    useEffect(() => {
     if (!activated) return;
     const timer = window.setTimeout(() => {
+      if (planFromSaved) {
+        // Standalone plan: back to the Planner
+        setPlanFromSaved(false);
+        toast.success("Your study plan is active", {
+          description: "Your new study sessions are in your planner.",
+        });
+        navigate("/planner", { replace: true });
+        return;
+      }
       navigate("/onboarding/finish", {
         replace: true,
         state: { planActivated: true },
       });
     }, 900);
     return () => window.clearTimeout(timer);
-  }, [activated, navigate]);
+  }, [activated, planFromSaved, setPlanFromSaved, navigate]);
 
   // The sessions, ordered by day and time. `index` is the session's place in
   // the plan, which is how its venue is found.
@@ -137,14 +156,14 @@ export default function StudyVenuesPage() {
   };
 
   const handleActivate = async () => {
-    if (!extraction || !allDone || isBusy) return;
+    if ((!extraction && !planFromSaved) || !allDone || isBusy) return;
 
     setIsActivating(true);
     setError(null);
 
     try {
       await activateStudyPlan(
-        extraction.import_id,
+        extraction?.import_id ?? null,
         studyPlan.sessions.map((session, index) => ({
           ...session,
           venue: venues[index].trim(),
@@ -199,6 +218,14 @@ export default function StudyVenuesPage() {
           <p className="mb-4 text-sm text-muted-foreground">
             Where will you usually study? Add a venue for each study session.
           </p>
+
+          {planFromSaved && (
+            <p className="mb-4 rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+              Activating this plan replaces your upcoming AI-planned sessions
+              that are still planned. Completed, skipped and manually added
+              sessions are not touched.
+            </p>
+          )}
 
           {/* Same venue for every session */}
           <div className="mb-4 rounded-xl border border-primary/20 bg-primary/5 p-3">

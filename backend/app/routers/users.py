@@ -1,8 +1,9 @@
 from io import BytesIO
 
-from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status, Request, Response, BackgroundTasks
 from PIL import Image, ImageOps, UnidentifiedImageError
 from sqlalchemy.orm import Session
+from app.services.password_reset import queue_password_changed_email
 
 from app.dependencies import get_db, get_current_user
 from app.models.user import User
@@ -10,13 +11,19 @@ from app.models.user_avatar import UserAvatar
 from datetime import datetime, timezone
 from app.schemas.auth import UserResponse, MessageResponse
 from app.schemas.user import UpdateProfileRequest, ChangePasswordRequest
-from app.utils.security import verify_password, hash_password
+from app.utils.security import verify_password, hash_password, create_access_token, set_auth_cookie
 from app.schemas.auth import GeminiKeyRequest, GeminiKeyResponse, MessageResponse
 from app.services.gemini import GeminiUnreachableError, validate_gemini_api_key
 from app.models.study_preferences import StudyPreferences
 from app.schemas.study_preferences import (
     StudyPreferencesRequest,
     StudyPreferencesResponse,
+)
+from app.services.auth_limits import (
+    PASSWORD_CHANGE_FAILED,
+    PASSWORD_CHANGE_SUCCESS,
+    check_password_change_allowed,
+    record_event,
 )
 
 router = APIRouter()
@@ -68,6 +75,9 @@ def update_profile(
 @router.patch("/me/password", response_model=MessageResponse)
 def change_password(
     payload: ChangePasswordRequest,
+    request: Request,
+    response: Response,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -75,11 +85,22 @@ def change_password(
     Changes the current user's password.
 
     Requires the current password for confirmation before allowing
-    the change. This prevents someone who finds an active session
-    from locking the real user out of their account.
+    the change. Too many wrong answers lock this for a while.
+
+    A password change signs the student out everywhere else: every other
+    login stops working. The device that made the change gets a fresh login.
     """
+    check_password_change_allowed(db, current_user.id)
+
     # Verify current password before allowing the change
     if not verify_password(payload.current_password, current_user.hashed_password):
+        record_event(
+            db,
+            PASSWORD_CHANGE_FAILED,
+            request,
+            email=current_user.email,
+            user_id=current_user.id,
+        )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Current password is incorrect.",
@@ -93,9 +114,34 @@ def change_password(
         )
 
     current_user.hashed_password = hash_password(payload.new_password)
+    # Ends every other login: their tokens carry the old version number
+    current_user.token_version += 1
     db.commit()
 
-    return {"message": "Password changed successfully."}
+    record_event(
+        db,
+        PASSWORD_CHANGE_SUCCESS,
+        request,
+        email=current_user.email,
+        user_id=current_user.id,
+    )
+    
+    # A safety net: tell the student, in case it was not them
+    queue_password_changed_email(current_user, background_tasks)
+    
+    # Keep THIS device signed in with a fresh login that has the new number
+    db.refresh(current_user)
+    set_auth_cookie(
+        response,
+        create_access_token(
+            user_id=current_user.id, token_version=current_user.token_version
+        ),
+    )
+
+    return {
+        "message": "Password changed successfully. You have been signed out on your other devices."
+    }
+
 
 @router.post("/me/gemini-key", response_model=GeminiKeyResponse)
 def set_gemini_api_key(

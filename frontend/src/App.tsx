@@ -13,11 +13,9 @@ import NotificationsPage from "@/pages/notifications/NotificationsPage";
 import type { User } from "@/api/auth";
 import OnboardingSignOut from "@/components/onboarding/OnboardingSignOut";
 import AuthPage from "@/pages/auth/AuthPage";
-import DashboardPage from "@/pages/dashboard/DashboardPage";
-import TimetablePage from "@/pages/timetable/TimetablePage";
-import StudyPlannerPage from "@/pages/planner/StudyPlannerPage";
-import TasksPage from "@/pages/tasks/TasksPage";
-import AssignmentsPage from "@/pages/assignments/AssignmentsPage";
+import TimetableRoute from "@/pages/timetable/TimetableRoute";
+import TasksEntry from "@/pages/tasks/TasksEntry";
+import AssignmentsEntry from "@/pages/assignments/AssignmentsEntry";
 import ExamsPage from "@/pages/exams/ExamsPage";
 import EventsPage from "@/pages/events/EventsPage";
 import AnalyticsPage from "@/pages/analytics/AnalyticsPage";
@@ -40,6 +38,12 @@ import StudyVenuesPage from "@/pages/onboarding/StudyVenuesPage";
 import FinishSetupPage from "@/pages/onboarding/FinishSetupPage";
 import SettingsPage from "@/pages/settings/SettingsPage";
 import LectureMarksPage from "@/pages/lectures/LectureMarksPage";
+import VerifyEmailPage from "@/pages/auth/VerifyEmailPage";
+import ForgotPasswordPage from "@/pages/auth/ForgotPasswordPage";
+import ResetPasswordPage from "@/pages/auth/ResetPasswordPage";
+import MorePage from "@/pages/more/MorePage";
+import DashboardEntry from "@/pages/dashboard/DashboardEntry";
+import StudyPlannerEntry from "@/pages/planner/StudyPlannerEntry";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -115,6 +119,9 @@ function AppRoutes() {
           <Route path="/login" element={<AuthLayout />} />
           <Route path="/register" element={<AuthLayout />} />
           <Route path="/account-setup" element={<AccountCreationPage />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
         <OnboardingSignOut />
@@ -125,10 +132,13 @@ function AppRoutes() {
     // A student who has not finished onboarding can only see the onboarding
   // pages. Anything else (like the Dashboard) sends them to the step they
   // still have to do.
-  if (
+    if (
     user &&
     user.onboarding_completed === false &&
-    !location.pathname.startsWith("/onboarding/")
+    !location.pathname.startsWith("/onboarding/") &&
+        !["/verify-email", "/forgot-password", "/reset-password"].includes(
+      location.pathname
+    )
   ) {
     return <Navigate to={getResumeStep(user)} replace />;
   }
@@ -136,6 +146,10 @@ function AppRoutes() {
   return (
     <OnboardingProvider>
       <Routes>
+        {/* The email verification link works whether or not you are logged in */}
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         {/* Public routes — logged-in users are sent to the Dashboard */}
         <Route
           element={
@@ -169,7 +183,7 @@ function AppRoutes() {
           path="/dashboard"
           element={
             <ProtectedLayout title="Dashboard" showTopBar>
-              <DashboardPage />
+              <DashboardEntry />
             </ProtectedLayout>
           }
         />
@@ -193,7 +207,7 @@ function AppRoutes() {
           }
         />
         
-                <Route
+        <Route
           path="/settings"
           element={
             <ProtectedLayout title="Settings">
@@ -215,7 +229,7 @@ function AppRoutes() {
           path="/timetable"
           element={
             <ProtectedLayout title="Timetable">
-              <TimetablePage />
+              <TimetableRoute />
             </ProtectedLayout>
           }
         />
@@ -224,7 +238,7 @@ function AppRoutes() {
           path="/planner"
           element={
             <ProtectedLayout title="Study Planner">
-              <StudyPlannerPage />
+              <StudyPlannerEntry />
             </ProtectedLayout>
           }
         />
@@ -275,10 +289,19 @@ function AppRoutes() {
         />
 
         <Route
+          path="/more"
+          element={
+            <ProtectedLayout title="More">
+              <MorePage />
+            </ProtectedLayout>
+          }
+        />
+
+        <Route
           path="/tasks"
           element={
             <ProtectedLayout title="Tasks">
-              <TasksPage />
+              <TasksEntry />
             </ProtectedLayout>
           }
         />
@@ -287,7 +310,7 @@ function AppRoutes() {
           path="/assignments"
           element={
             <ProtectedLayout title="Assignments">
-              <AssignmentsPage />
+              <AssignmentsEntry />
             </ProtectedLayout>
           }
         />

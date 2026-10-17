@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
+import { PASSWORD_TOO_LONG_MESSAGE, passwordFitsLimit } from "@/lib/passwordRules";
 
 import { changePassword } from "@/api/users";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,8 @@ const passwordSchema = z
     current_password: z.string().min(1, "Current password is required"),
     new_password: z
       .string()
-      .min(8, "New password must be at least 8 characters"),
+      .min(8, "New password must be at least 8 characters")
+      .refine(passwordFitsLimit, PASSWORD_TOO_LONG_MESSAGE),
     confirm_password: z.string(),
   })
   .refine((data) => data.new_password === data.confirm_password, {
@@ -105,7 +107,8 @@ export default function ChangePasswordForm() {
       });
       form.reset();
       toast.success("Password changed", {
-        description: "Your password has been updated.",
+        description:
+          "Your password has been updated. Other devices have been signed out.",
       });
     } catch (error) {
       setServerError(

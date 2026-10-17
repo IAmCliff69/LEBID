@@ -16,10 +16,32 @@ export interface AiRecommendation {
   data: Record<string, unknown>;
 }
 
+export type AiActionKind = "create" | "update" | "delete";
+export type AiActionEntity =
+  | "study_session"
+  | "task"
+  | "assignment"
+  | "exam"
+  | "event";
+
+// A change the AI proposes. Nothing happens until the student presses Apply.
+export interface AiAction {
+  key: string;
+  action: AiActionKind;
+  entity: AiActionEntity;
+  id: string | null;
+  title: string;
+  description: string;
+  target: string | null; // the real item, read from the database
+  payload: Record<string, unknown>;
+  previous: Record<string, unknown> | null; // what Undo needs
+}
 export interface AiChatResponse {
   message: string;
   recommendations: AiRecommendation[];
   insights: string[];
+  actions: AiAction[];
+  action_warnings: string[];
 }
 
 export const sendAiMessage = async (

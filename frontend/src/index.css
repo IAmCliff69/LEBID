@@ -360,3 +360,23 @@ select option {
 .dark select {
   color-scheme: dark;
 }
+
+/* Bottom sheets slide up from the bottom of the screen */
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes sheet-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
